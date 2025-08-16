@@ -1,0 +1,11 @@
+flask_sqlalchemy
+flask
+htmlentities
+flask-cors
+SQLAlchemy
+stripe
+flask-socketio
+Flask-Testing
+loguru
+mysqlclient
+flask-pymongo
