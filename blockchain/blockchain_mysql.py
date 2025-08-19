@@ -3,12 +3,6 @@ from blockchain.blockchain_base import BlockchainBase
 
 
 class BlockchainMYSQL(BlockchainBase):
-    def get_mempool_from_db(self):
-        return [
-            {'sender': tx.sender, 'recipient': tx.recipient, 'amount': tx.amount, 'date': tx.date}
-            for tx in MempoolTransactionMySQL.query.all()
-        ]
-
     def get_last_block_from_db(self):
         last_block_db = BlockchainBlockMySQL.query.order_by(BlockchainBlockMySQL.index.desc()).first()
         if last_block_db:
@@ -21,7 +15,6 @@ class BlockchainMYSQL(BlockchainBase):
                 'merkle_root': last_block_db.merkle_root,
                 'hash': last_block_db.hash
             }
-
         return None
 
     def save_block_to_db(self, block, transactions):
@@ -48,11 +41,28 @@ class BlockchainMYSQL(BlockchainBase):
 
         db.session.commit()
 
-    def save_transaction_to_mempool(self, sender, recipient, amount, date):
-        db_tx = MempoolTransactionMySQL(sender=sender, recipient=recipient, amount=amount, date=date)
-        db.session.add(db_tx)
+    def save_transactions_to_mempool(self, transactions):
+        if not transactions:
+            return
+
+        db_objects = [MempoolTransactionMySQL(**tx) for tx in transactions]
+        db.session.add_all(db_objects)
         db.session.commit()
 
-    def clear_mempool(self):
-        db.session.query(MempoolTransactionMySQL).delete()
+    # --- Nowe metody wymagane przez BlockchainBase ---
+    def get_pending_transactions(self, limit):
+        # Pobiera limit transakcji z mempoola posortowanych według daty
+        txs = MempoolTransactionMySQL.query.order_by(MempoolTransactionMySQL.date.asc()).limit(limit).all()
+        return [{'id': tx.id, 'sender': tx.sender, 'recipient': tx.recipient, 'amount': tx.amount, 'date': tx.date} for tx in txs]
+
+    def get_mempool_count(self):
+        # Zwraca liczbę transakcji w mempoolu
+        return MempoolTransactionMySQL.query.count()
+
+    def clear_pending_transactions(self, transactions):
+        # Usuwa z DB dokładnie te transakcje, które zostały już użyte w bloku
+        if not transactions:
+            return
+        ids = [tx['id'] for tx in transactions]
+        MempoolTransactionMySQL.query.filter(MempoolTransactionMySQL.id.in_(ids)).delete(synchronize_session=False)
         db.session.commit()

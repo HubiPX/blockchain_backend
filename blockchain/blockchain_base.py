@@ -1,20 +1,16 @@
+import hashlib
+import json
 from abc import ABC, abstractmethod
-import hashlib, json
 from datetime import datetime
 
 
 class BlockchainBase(ABC):
     def __init__(self):
         self.hm_current_transactions = []
-        self.mempool = self.get_mempool_from_db()
         # Zmienione: najpierw pobieramy ostatni blok, potem tworzymy genesis block jeśli go brak
         self.last_block = self.get_last_block_from_db()
         if not self.last_block:  # Dodane: tworzymy genesis block tylko jeśli brak ostatniego bloku
             self.last_block = self._create_genesis_block()
-
-    @abstractmethod
-    def get_mempool_from_db(self):
-        pass
 
     @abstractmethod
     def get_last_block_from_db(self):
@@ -25,11 +21,22 @@ class BlockchainBase(ABC):
         pass
 
     @abstractmethod
-    def save_transaction_to_mempool(self, sender, recipient, amount, date):
+    def save_transactions_to_mempool(self, transactions: list[dict]):
         pass
 
     @abstractmethod
-    def clear_mempool(self):
+    def get_pending_transactions(self, limit):
+        """Pobiera określoną liczbę transakcji z mempoola"""
+        pass
+
+    @abstractmethod
+    def get_mempool_count(self):
+        """Zwraca liczbę transakcji w mempoolu"""
+        pass
+
+    @abstractmethod
+    def clear_pending_transactions(self, transactions):
+        """Usuwa określone transakcje z mempoola w DB"""
         pass
 
     def hm_proof_of_work(self, hm_last_proof, block_hash):
@@ -63,53 +70,51 @@ class BlockchainBase(ABC):
         self.save_block_to_db(block, [])
         return block
 
+    def _mine_block(self, tx_limit):
+        """Pomocnicza metoda - kopie blok, gdy mempool >= tx_limit"""
+        pending_txs = self.get_pending_transactions(tx_limit)
+        self.hm_current_transactions = pending_txs
+
+        proof = self.hm_proof_of_work(self.last_block['proof'], self.last_block['hash'])
+        block = self._create_block(proof, self.last_block['hash'])
+
+        self.save_block_to_db(block, pending_txs)
+        self.last_block = block
+
+        self.clear_pending_transactions(pending_txs)
+
     def hm_add_transaction_to_mempool(self, transactions, tx_limit=5):
-        # Obsługa: pojedyncza transakcja albo lista transakcji
         if not isinstance(transactions, list):
             transactions = [transactions]
 
-        for tx in transactions:
-            sender = tx['sender']
-            recipient = tx['recipient']
-            amount = tx['amount']
-            date = tx['date']
+        space_left = tx_limit - self.get_mempool_count()
 
-            # Zapis do DB mempool
-            self.save_transaction_to_mempool(sender, recipient, amount, date)
+        # --- przypadek 1: transakcji jest idealnie by wypełnić blok ---
+        if space_left == len(transactions):
+            self.save_transactions_to_mempool(transactions)
+            self._mine_block(tx_limit)
 
-            # Dodanie do mempoola w pamięci
-            self.mempool.append({
-                'sender': sender,
-                'recipient': recipient,
-                'amount': amount,
-                'date': date
-            })
+        # --- przypadek 2: mieści się wszystko, ale nie wypełnia bloku ---
+        elif space_left > len(transactions):
+            self.save_transactions_to_mempool(transactions)
 
-            # --- sprawdzanie, czy można wykopać blok ---
-            while len(self.mempool) >= tx_limit:
-                # Bierzemy dokładnie tx_limit transakcji
-                pending_txs = self.mempool[:tx_limit]
-                self.hm_current_transactions = pending_txs
+        # --- przypadek 3: transakcji jest więcej niż miejsca w bloku ---
+        elif space_left < len(transactions):
+            # najpierw dodajemy brakujące do pełnego bloku i tworzymy blok
+            first_batch = transactions[:space_left]
+            self.save_transactions_to_mempool(first_batch)
+            self._mine_block(tx_limit)
 
-                # Proof of Work
-                proof = self.hm_proof_of_work(self.last_block['proof'], self.last_block['hash'])
-                block = self._create_block(proof, self.last_block['hash'])
+            x = (len(transactions) - space_left) // tx_limit
+            y = (len(transactions) - space_left) / tx_limit
 
-                # Zapis bloku + transakcji do DB
-                self.save_block_to_db(block, pending_txs)
-
-                # Aktualizacja stanu
-                self.last_block = block
-
-                # Usuwamy zużyte transakcje z mempoola (pamięć + DB)
-                self.mempool = self.mempool[tx_limit:]
-                self.clear_mempool()
-                for leftover in self.mempool:
-                    self.save_transaction_to_mempool(
-                        leftover['sender'], leftover['recipient'], leftover['amount'], leftover['date']
-                    )
-
-        return len(self.mempool)
+            for batch_nr in range(x):
+                batch = transactions[(batch_nr * tx_limit + space_left):(batch_nr + 1) * tx_limit + space_left]
+                self.save_transactions_to_mempool(batch)
+                self._mine_block(tx_limit)
+            if x != y:
+                batch = transactions[(x * tx_limit + space_left):(x + 1) * tx_limit + space_left]
+                self.save_transactions_to_mempool(batch)
 
     @staticmethod
     def hm_hash(data):

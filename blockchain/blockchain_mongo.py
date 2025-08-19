@@ -7,14 +7,6 @@ class BlockchainMongo(BlockchainBase):
         self.mongo = mongo
         super().__init__()
 
-    def get_mempool_from_db(self):
-        # Mongo nie wymusza schematu, więc zwracamy listę słowników pasującą do Base
-        mempool = self.mongo.db.mempool_transactions.find()
-        return [
-            {'sender': tx['sender'], 'recipient': tx['recipient'], 'amount': tx['amount'], 'date': tx['date']}
-            for tx in mempool
-        ]
-
     def get_last_block_from_db(self):
         last_block = self.mongo.db.blockchain_blocks.find().sort('index', -1).limit(1)
         last_block = list(last_block)
@@ -32,7 +24,6 @@ class BlockchainMongo(BlockchainBase):
         return None
 
     def save_block_to_db(self, block, transactions):
-        # W Mongo nie ma autoincrement id, ale możemy Mongo wygenerować _id i przypisać block_id w transakcjach
         db_block = {
             'index': block['index'],
             'timestamp': block['timestamp'],
@@ -42,7 +33,7 @@ class BlockchainMongo(BlockchainBase):
             'hash': block['hash']
         }
         result = self.mongo.db.blockchain_blocks.insert_one(db_block)
-        block_id = result.inserted_id  # Mongo _id
+        block_id = result.inserted_id
 
         for tx in transactions:
             db_tx = {
@@ -54,14 +45,26 @@ class BlockchainMongo(BlockchainBase):
             }
             self.mongo.db.blockchain_transactions.insert_one(db_tx)
 
-    def save_transaction_to_mempool(self, sender, recipient, amount, date):
-        db_tx = {
-            'sender': sender,
-            'recipient': recipient,
-            'amount': amount,
-            'date': date
-        }
-        self.mongo.db.mempool_transactions.insert_one(db_tx)
+    def save_transactions_to_mempool(self, transactions):
+        if not transactions:
+            return
 
-    def clear_mempool(self):
-        self.mongo.db.mempool_transactions.delete_many({})
+        self.mongo.db.mempool_transactions.insert_many(transactions)
+
+    # --- Nowe metody wymagane przez BlockchainBase ---
+    def get_pending_transactions(self, limit):
+        txs = self.mongo.db.mempool_transactions.find().sort('date', 1).limit(limit)
+        return [
+            {'_id': tx['_id'], 'sender': tx['sender'], 'recipient': tx['recipient'], 'amount': tx['amount'], 'date': tx['date']}
+            for tx in txs
+        ]
+
+    def get_mempool_count(self):
+        return self.mongo.db.mempool_transactions.count_documents({})
+
+    def clear_pending_transactions(self, transactions):
+        if not transactions:
+            return
+        ids = [tx['_id'] for tx in transactions]
+        self.mongo.db.mempool_transactions.delete_many({'_id': {'$in': ids}})
+
