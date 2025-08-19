@@ -24,7 +24,6 @@ class TransactionsMySQL(db.Model):
     recipient = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
     date = db.Column(db.DateTime, nullable=False)
-    code = db.Column(db.String(8), nullable=False)
 
 
 class BlockchainBlockMySQL(db.Model):
@@ -68,7 +67,6 @@ class TransactionsSQLite(db.Model):
     recipient = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
     date = db.Column(db.DateTime, nullable=False)
-    code = db.Column(db.String(8), nullable=False)
 
 
 class BlockchainBlockSQLite(db.Model):
@@ -111,20 +109,16 @@ class TransactionsMongo:
     def __init__(self, mongo):
         self.collection = mongo.db.transactions
 
-    def insert_transaction(self, sender, recipient, amount, code, date=None):
+    def insert_transaction(self, sender, recipient, amount, date=None):
         if date is None:
             date = datetime.utcnow()
         tx = {
             "sender": sender,
             "recipient": recipient,
             "amount": amount,
-            "code": code,
             "date": date
         }
         return self.collection.insert_one(tx)
-
-    def find_transaction_by_code(self, code):
-        return self.collection.find_one({"code": code})
 
 
 class BlockchainMongo:
