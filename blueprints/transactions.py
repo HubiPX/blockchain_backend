@@ -45,11 +45,6 @@ def transfer_score():
     if sender.score < amount:
         return 'Nie masz wystarczającej liczby punktów do przesłania.', 400
 
-    def generate_transaction_hash(sender, recipient, amount, date):
-        raw_str = f"{sender}:{recipient}:{amount}:{date.isoformat()}"
-        hash_obj = hashlib.sha256(raw_str.encode('utf-8'))
-        return hash_obj.hexdigest()[:8]
-
     # Transfer punktów
     sender.score -= amount
     recipient.score += amount
@@ -59,8 +54,7 @@ def transfer_score():
         'sender': sender.username,
         'recipient': recipient.username,
         'amount': amount,
-        'date': now,
-        'code': generate_transaction_hash(sender.username, recipient.username, amount, now)
+        'date': now
     }
 
     tx_mysql = TransactionsMySQL(**tx_data)
@@ -81,7 +75,6 @@ def transfer_score():
             sender=tx_data['sender'],
             recipient=tx_data['recipient'],
             amount=tx_data['amount'],
-            code=tx_data['code'],
             date=tx_data['date']
         )
 
@@ -115,6 +108,8 @@ def transfer_score():
 @Auth.logged_rcon
 def generate_random_transactions():
     from main import mongo
+    from flask import current_app
+
     data = request.get_json()
     count = data.get("count")
 
@@ -131,16 +126,12 @@ def generate_random_transactions():
 
     user_scores = {user.username: user.score for user in all_users}
 
-    def generate_transaction_hash(sender, recipient, amount, date):
-        raw_str = f"{sender}:{recipient}:{amount}:{date.isoformat()}"
-        hash_obj = hashlib.sha256(raw_str.encode('utf-8'))
-        return hash_obj.hexdigest()[:8]
-
     transactions_data = []
     generated = 0
     attempts = 0
     max_attempts = count * 10
 
+    # generowanie losowych transakcji (bez pola 'code')
     while generated < count and attempts < max_attempts:
         attempts += 1
         sender, recipient = random.sample(all_users, 2)
@@ -163,12 +154,12 @@ def generate_random_transactions():
             'sender': sender_name,
             'recipient': recipient_name,
             'amount': amount,
-            'date': now,
-            'code': generate_transaction_hash(sender_name, recipient_name, amount, now)
+            'date': now
         }
         transactions_data.append(tx)
         generated += 1
 
+    # przygotowanie sqlite session (jak wcześniej)
     sqlite_engine = db.get_engine(bind='sqlite_db')
     sqlite_session_factory = sessionmaker(bind=sqlite_engine)
     sqlite_session = scoped_session(sqlite_session_factory)
@@ -176,6 +167,9 @@ def generate_random_transactions():
     batch_size = 2000
 
     try:
+        # ---------------------------
+        #  HISTORY: zapis do tabel historycznych (MySQL, SQLite, Mongo)
+        # ---------------------------
         # MySQL
         start_mysql = time.perf_counter()
         for i in range(0, generated, batch_size):
@@ -196,7 +190,7 @@ def generate_random_transactions():
         end_sqlite = time.perf_counter()
         sqlite_time = end_sqlite - start_sqlite
 
-        # MongoDB
+        # Mongo (history collection)
         start_mongo = time.perf_counter()
         for i in range(0, generated, batch_size):
             batch = transactions_data[i:i + batch_size]
@@ -204,14 +198,36 @@ def generate_random_transactions():
                 'sender': tx['sender'],
                 'recipient': tx['recipient'],
                 'amount': tx['amount'],
-                'code': tx['code'],
                 'date': tx['date']
             } for tx in batch]
             mongo.db.transactions.insert_many(mongo_batch)
         end_mongo = time.perf_counter()
         mongo_time = end_mongo - start_mongo
 
-        # aktualizacja score userow po poprawnym dodaniu do bazy
+        # ---------------------------
+        #  MEMPOOL: dodajemy do blockchainów (batched)
+        # ---------------------------
+        # przygotuj helper do przygotowania batchu dla mempool (ten sam co history, tylko bez dodatkowych pól)
+        def _mempool_batch(batch):
+            return [{'sender': tx['sender'], 'recipient': tx['recipient'], 'amount': tx['amount'], 'date': tx['date']} for tx in batch]
+
+        # Dodajemy transakcje do mempooli batched — hm_add_transaction_to_mempool ma obsłużyć tworzenie bloków
+        for i in range(0, generated, batch_size):
+            batch = transactions_data[i:i + batch_size]
+            mem_batch = _mempool_batch(batch)
+
+            # MySQL mempool
+            current_app.blockchains["mysql"].hm_add_transaction_to_mempool(mem_batch)  # type: ignore
+
+            # SQLite mempool
+            current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(mem_batch)  # type: ignore
+
+            # Mongo mempool
+            current_app.blockchains["mongo"].hm_add_transaction_to_mempool(mem_batch)  # type: ignore
+
+        # ---------------------------
+        #  Aktualizacja score userów w DB (historyczny Users table)
+        # ---------------------------
         for user in all_users:
             user.score = user_scores[user.username]
         db.session.commit()
