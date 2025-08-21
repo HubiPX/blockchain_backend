@@ -7,9 +7,8 @@ from datetime import datetime
 class BlockchainBase(ABC):
     def __init__(self):
         self.hm_current_transactions = []
-        # Zmienione: najpierw pobieramy ostatni blok, potem tworzymy genesis block jeśli go brak
         self.last_block = self.get_last_block_from_db()
-        if not self.last_block:  # Dodane: tworzymy genesis block tylko jeśli brak ostatniego bloku
+        if not self.last_block:
             self.last_block = self._create_genesis_block()
 
     @abstractmethod
