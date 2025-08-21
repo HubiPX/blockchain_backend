@@ -187,8 +187,7 @@ def transactions():
             "sender": x.sender,
             "recipient": x.recipient,
             "amount": x.amount,
-            "date": x.date,
-            "code": x.code
+            "date": x.date
         } for x in transactions]
     }, 200
 
