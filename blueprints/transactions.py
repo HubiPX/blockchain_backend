@@ -7,7 +7,6 @@ from database.models import db
 from database.models import Users, TransactionsMySQL, TransactionsSQLite, TransactionsMongo
 from blueprints.auth import Auth
 from datetime import datetime
-import hashlib
 
 transactions = Blueprint('transactions', __name__)
 
