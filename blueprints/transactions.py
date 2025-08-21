@@ -1,6 +1,6 @@
 import random
 import time
-from flask import Blueprint, session, request, current_app
+from flask import Blueprint, session, request, current_app, jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import scoped_session, sessionmaker
 from database.models import db
@@ -236,15 +236,19 @@ def generate_random_transactions():
             user.score = user_scores[user.username]
         db.session.commit()
 
-        return (f"Wygenerowano i dodano {generated} losowych transakcji.\n"
-                f"Czasy zapisu:\n"
-                f"- MySQL: {mysql_time:.3f} s\n"
-                f"- SQLite: {sqlite_time:.3f} s\n"
-                f"- MongoDB: {mongo_time:.3f} s\n"
-                f"Czasy zapisu blokchain:\n"
-                f"- MySQL Blockchain: {mysql_blockchain_time:.3f} s\n"
-                f"- SQLite Blockchain: {sqlite_blockchain_time:.3f} s\n"
-                f"- MongoDB Blockchain: {mongo_blockchain_time:.3f} s"), 200
+        return jsonify({
+            "message": f"Wygenerowano i dodano {generated} losowych transakcji.",
+            "db_times": {
+                "MySQL": f"{mysql_time:.3f} s",
+                "SQLite": f"{sqlite_time:.3f} s",
+                "MongoDB": f"{mongo_time:.3f} s",
+            },
+            "blockchain_times": {
+                "MySQL Blockchain": f"{mysql_blockchain_time:.3f} s",
+                "SQLite Blockchain": f"{sqlite_blockchain_time:.3f} s",
+                "MongoDB Blockchain": f"{mongo_blockchain_time:.3f} s",
+            }
+        }), 200
 
     except Exception as e:
         db.session.rollback()
