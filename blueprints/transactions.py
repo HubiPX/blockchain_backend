@@ -131,7 +131,6 @@ def generate_random_transactions():
     attempts = 0
     max_attempts = count * 10
 
-    # generowanie losowych transakcji (bez pola 'code')
     while generated < count and attempts < max_attempts:
         attempts += 1
         sender, recipient = random.sample(all_users, 2)
@@ -159,7 +158,10 @@ def generate_random_transactions():
         transactions_data.append(tx)
         generated += 1
 
-    # przygotowanie sqlite session (jak wcześniej)
+    copy_transactions_data_sqlite = [dict(tx) for tx in transactions_data]
+    copy_transactions_data_mongo = [dict(tx) for tx in transactions_data]
+
+    # przygotowanie sqlite session
     sqlite_engine = db.get_engine(bind='sqlite_db')
     sqlite_session_factory = sessionmaker(bind=sqlite_engine)
     sqlite_session = scoped_session(sqlite_session_factory)
@@ -168,14 +170,15 @@ def generate_random_transactions():
 
     try:
         # ---------------------------
-        #  HISTORY: zapis do tabel historycznych (MySQL, SQLite, Mongo)
+        #  zapis do baz danych (MySQL, SQLite, Mongo)
         # ---------------------------
         # MySQL
         start_mysql = time.perf_counter()
         for i in range(0, generated, batch_size):
             batch = transactions_data[i:i + batch_size]
-            batch_objects = [TransactionsMySQL(**tx) for tx in batch]
-            db.session.add_all(batch_objects)
+            #batch_objects = [TransactionsMySQL(**tx) for tx in batch]
+            #db.session.add_all(batch_objects)
+            db.session.bulk_insert_mappings(TransactionsMySQL, batch)
             db.session.commit()
         end_mysql = time.perf_counter()
         mysql_time = end_mysql - start_mysql
@@ -183,9 +186,10 @@ def generate_random_transactions():
         # SQLite
         start_sqlite = time.perf_counter()
         for i in range(0, generated, batch_size):
-            batch = transactions_data[i:i + batch_size]
-            batch_objects = [TransactionsSQLite(**tx) for tx in batch]
-            sqlite_session.add_all(batch_objects)
+            batch = copy_transactions_data_sqlite[i:i + batch_size]
+            #batch_objects = [TransactionsSQLite(**tx) for tx in batch]
+            #sqlite_session.add_all(batch_objects)
+            sqlite_session.bulk_insert_mappings(TransactionsSQLite, batch)  # type: ignore
             sqlite_session.commit()
         end_sqlite = time.perf_counter()
         sqlite_time = end_sqlite - start_sqlite
@@ -193,37 +197,38 @@ def generate_random_transactions():
         # Mongo (history collection)
         start_mongo = time.perf_counter()
         for i in range(0, generated, batch_size):
-            batch = transactions_data[i:i + batch_size]
-            mongo_batch = [{
-                'sender': tx['sender'],
-                'recipient': tx['recipient'],
-                'amount': tx['amount'],
-                'date': tx['date']
-            } for tx in batch]
-            mongo.db.transactions.insert_many(mongo_batch)
+            batch = copy_transactions_data_mongo[i:i + batch_size]
+            mongo.db.transactions.insert_many(batch)
         end_mongo = time.perf_counter()
         mongo_time = end_mongo - start_mongo
 
         # ---------------------------
-        #  MEMPOOL: dodajemy do blockchainów (batched)
+        #  MEMPOOL: dodajemy do blockchainów (batched) + pomiar czasu
         # ---------------------------
-        # przygotuj helper do przygotowania batchu dla mempool (ten sam co history, tylko bez dodatkowych pól)
-        def _mempool_batch(batch):
-            return [{'sender': tx['sender'], 'recipient': tx['recipient'], 'amount': tx['amount'], 'date': tx['date']} for tx in batch]
 
-        # Dodajemy transakcje do mempooli batched — hm_add_transaction_to_mempool ma obsłużyć tworzenie bloków
+        # MySQL blockchain
+        start_mysql_blockchain = time.perf_counter()
         for i in range(0, generated, batch_size):
             batch = transactions_data[i:i + batch_size]
-            mem_batch = _mempool_batch(batch)
+            current_app.blockchains["mysql"].hm_add_transaction_to_mempool(batch)  # type: ignore
+        end_mysql_blockchain = time.perf_counter()
+        mysql_blockchain_time = end_mysql_blockchain - start_mysql_blockchain
 
-            # MySQL mempool
-            current_app.blockchains["mysql"].hm_add_transaction_to_mempool(mem_batch)  # type: ignore
+        # SQLite blockchain
+        start_sqlite_blockchain = time.perf_counter()
+        for i in range(0, generated, batch_size):
+            batch = copy_transactions_data_sqlite[i:i + batch_size]
+            current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(batch)  # type: ignore
+        end_sqlite_blockchain = time.perf_counter()
+        sqlite_blockchain_time = end_sqlite_blockchain - start_sqlite_blockchain
 
-            # SQLite mempool
-            current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(mem_batch)  # type: ignore
-
-            # Mongo mempool
-            current_app.blockchains["mongo"].hm_add_transaction_to_mempool(mem_batch)  # type: ignore
+        # Mongo blockchain
+        start_mongo_blockchain = time.perf_counter()
+        for i in range(0, generated, batch_size):
+            batch = copy_transactions_data_mongo[i:i + batch_size]
+            current_app.blockchains["mongo"].hm_add_transaction_to_mempool(batch)  # type: ignore
+        end_mongo_blockchain = time.perf_counter()
+        mongo_blockchain_time = end_mongo_blockchain - start_mongo_blockchain
 
         # ---------------------------
         #  Aktualizacja score userów w DB (historyczny Users table)
@@ -236,7 +241,11 @@ def generate_random_transactions():
                 f"Czasy zapisu:\n"
                 f"- MySQL: {mysql_time:.3f} s\n"
                 f"- SQLite: {sqlite_time:.3f} s\n"
-                f"- MongoDB: {mongo_time:.3f} s"), 200
+                f"- MongoDB: {mongo_time:.3f} s\n"
+                f"Czasy zapisu blokchain:\n"
+                f"- MySQL Blockchain: {mysql_blockchain_time:.3f} s\n"
+                f"- SQLite Blockchain: {sqlite_blockchain_time:.3f} s\n"
+                f"- MongoDB Blockchain: {mongo_blockchain_time:.3f} s"), 200
 
     except Exception as e:
         db.session.rollback()
