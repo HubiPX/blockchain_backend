@@ -267,3 +267,41 @@ def generate_random_transactions():
 
     finally:
         sqlite_session.remove()
+
+
+@transactions.route('/validate', methods=["GET"])
+@Auth.logged_rcon
+def validate_blockchains():
+    # Pobieramy opcjonalny parametr 'name' z query string
+    blockchain_name = None
+
+    results = {}
+    all_valid = True
+
+    if blockchain_name:
+        # Sprawdzamy tylko wybrany blockchain
+        blockchain = current_app.blockchains.get(blockchain_name)  # type: ignore
+        if blockchain is None:
+            return jsonify({"status": "error", "message": f"Blockchain '{blockchain_name}' not found"}), 404
+
+        is_valid, message = blockchain.validate_chain()
+        results[blockchain_name] = {
+            "valid": is_valid,
+            "message": message
+        }
+        all_valid = is_valid
+    else:
+        # Sprawdzamy wszystkie blockchainy (dotychczasowa logika)
+        for name, blockchain in current_app.blockchains.items():  # type: ignore
+            is_valid, message = blockchain.validate_chain()
+            results[name] = {
+                "valid": is_valid,
+                "message": message
+            }
+            if not is_valid:
+                all_valid = False
+
+    if all_valid:
+        return jsonify({"status": "ok", "results": results}), 200
+    else:
+        return jsonify({"status": "error", "results": results}), 400
