@@ -48,7 +48,7 @@ def transfer_score():
     sender.score -= amount
     recipient.score += amount
 
-    now = datetime.utcnow()
+    now = datetime.utcnow().replace(microsecond=(datetime.utcnow().microsecond // 1000) * 1000)
     tx_data = {
         'sender': sender.username,
         'recipient': recipient.username,
@@ -130,6 +130,8 @@ def generate_random_transactions():
     attempts = 0
     max_attempts = count * 10
 
+    last_time = None  # zapamiętujemy ostatni timestamp
+
     while generated < count and attempts < max_attempts:
         attempts += 1
         sender, recipient = random.sample(all_users, 2)
@@ -147,7 +149,15 @@ def generate_random_transactions():
         user_scores[sender_name] -= amount
         user_scores[recipient_name] += amount
 
-        now = datetime.utcnow()
+        # bieżący czas, przycięty do ms
+        now = datetime.utcnow().replace(microsecond=(datetime.utcnow().microsecond // 1000) * 1000)
+
+        # jeżeli poprzednia transakcja miała >= now, to wymuszamy +1 ms
+        if last_time and now <= last_time:
+            now = last_time + timedelta(milliseconds=1)
+
+        last_time = now
+
         tx = {
             'sender': sender_name,
             'recipient': recipient_name,
