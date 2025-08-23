@@ -38,6 +38,11 @@ class BlockchainBase(ABC):
         """Usuwa określone transakcje z mempoola w DB"""
         pass
 
+    @abstractmethod
+    def get_full_chain(self) -> list[dict]:
+        """Zwraca cały blockchain z bazy w kolejności od genesis do ostatniego"""
+        pass
+
     def hm_proof_of_work(self, hm_last_proof, block_hash):
         hm_proof = 0
         while not self.hm_valid_proof(hm_last_proof, hm_proof, block_hash):
