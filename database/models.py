@@ -62,6 +62,7 @@ class MempoolTransactionMySQL(db.Model):
 class TransactionsSQLite(db.Model):
     __bind_key__ = 'sqlite_db'
     __tablename__ = 'transactions'
+    __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)
     sender = db.Column(db.String(20), nullable=False)
     recipient = db.Column(db.String(20), nullable=False)
@@ -72,6 +73,7 @@ class TransactionsSQLite(db.Model):
 class BlockchainBlockSQLite(db.Model):
     __bind_key__ = 'sqlite_db'
     __tablename__ = 'blockchain_blocks'
+    __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)
     index = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime)
@@ -84,6 +86,7 @@ class BlockchainBlockSQLite(db.Model):
 class BlockchainTransactionSQLite(db.Model):
     __bind_key__ = 'sqlite_db'
     __tablename__ = 'blockchain_transactions'
+    __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)
     block_id = db.Column(db.Integer, db.ForeignKey('blockchain_blocks.id'))
     sender = db.Column(db.String(20), nullable=False)
@@ -95,6 +98,7 @@ class BlockchainTransactionSQLite(db.Model):
 class MempoolTransactionSQLite(db.Model):
     __bind_key__ = 'sqlite_db'
     __tablename__ = 'mempool_transactions'
+    __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)
     sender = db.Column(db.String(20), nullable=False)
     recipient = db.Column(db.String(20), nullable=False)
