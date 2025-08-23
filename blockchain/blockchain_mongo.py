@@ -37,6 +37,7 @@ class BlockchainMongo(BlockchainBase):
 
         for tx in transactions:
             db_tx = {
+                '_id': tx['_id'],
                 'block_id': block_id,
                 'sender': tx['sender'],
                 'recipient': tx['recipient'],
