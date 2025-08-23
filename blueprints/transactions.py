@@ -6,7 +6,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from database.models import db
 from database.models import Users, TransactionsMySQL, TransactionsSQLite, TransactionsMongo
 from blueprints.auth import Auth
-from datetime import datetime
+from datetime import datetime, timedelta
 
 transactions = Blueprint('transactions', __name__)
 
