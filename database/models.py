@@ -30,7 +30,7 @@ class BlockchainBlockMySQL(db.Model):
     __tablename__ = 'blockchain_blocks'
     id = db.Column(db.Integer, primary_key=True)
     index = db.Column(db.Integer)
-    timestamp = db.Column(db.DateTime)
+    timestamp = db.Column(db.DateTime, nullable=False)
     proof = db.Column(db.Integer)
     previous_hash = db.Column(db.String(64))
     merkle_root = db.Column(db.String(64))
@@ -53,7 +53,7 @@ class MempoolTransactionMySQL(db.Model):
     sender = db.Column(db.String(20), nullable=False)
     recipient = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
-    date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
 
 
 #  SQLite
