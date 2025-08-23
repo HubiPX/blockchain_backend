@@ -66,3 +66,40 @@ class BlockchainMYSQL(BlockchainBase):
         ids = [tx['id'] for tx in transactions]
         MempoolTransactionMySQL.query.filter(MempoolTransactionMySQL.id.in_(ids)).delete(synchronize_session=False)
         db.session.commit()
+
+    def get_full_chain(self) -> list[dict]:
+        """Zwraca cały blockchain z MySQL w kolejności rosnącej po index,
+           wraz z transakcjami przypisanymi do każdego bloku"""
+
+        blocks = BlockchainBlockMySQL.query.order_by(
+            BlockchainBlockMySQL.index.asc()
+        ).all()
+
+        chain = []
+        for block in blocks:
+            # Pobierz transakcje powiązane z tym blokiem
+            txs = BlockchainTransactionMySQL.query.filter_by(
+                block_id=block.id
+            ).order_by(
+                BlockchainTransactionMySQL.id.asc()
+            ).all()
+
+            chain.append({
+                'index': block.index,
+                'timestamp': block.timestamp,
+                'transactions': [
+                    {
+                        'id': tx.id,
+                        'sender': tx.sender,
+                        'recipient': tx.recipient,
+                        'amount': tx.amount,
+                        'date': tx.date
+                    }
+                    for tx in txs
+                ],
+                'proof': block.proof,
+                'previous_hash': block.previous_hash,
+                'merkle_root': block.merkle_root
+            })
+
+        return chain

@@ -68,3 +68,40 @@ class BlockchainMongo(BlockchainBase):
         ids = [tx['_id'] for tx in transactions]
         self.mongo.db.mempool_transactions.delete_many({'_id': {'$in': ids}})
 
+    def get_full_chain(self) -> list[dict]:
+        """Zwraca cały blockchain w kolejności rosnącej po index,
+           z transakcjami w odpowiednim miejscu w bloku"""
+
+        blocks = self.mongo.db.blockchain_blocks.find(
+            {},
+            {"hash": 0}
+        ).sort("index", 1)
+
+        chain = []
+        for block in blocks:
+            txs = self.mongo.db.blockchain_transactions.find(
+                {"block_id": block["_id"]}
+            ).sort("_id", 1)
+
+            block_dict = {
+                "index": block["index"],
+                "timestamp": block["timestamp"],
+                "transactions": [
+                    {
+                        "_id": tx["_id"],
+                        "sender": tx["sender"],
+                        "recipient": tx["recipient"],
+                        "amount": tx["amount"],
+                        "date": tx["date"]
+                    }
+                    for tx in txs
+                ],
+                "proof": block["proof"],
+                "previous_hash": block["previous_hash"],
+                "merkle_root": block["merkle_root"]
+            }
+
+            chain.append(block_dict)
+
+        return chain
+
