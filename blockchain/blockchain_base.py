@@ -120,6 +120,25 @@ class BlockchainBase(ABC):
                 batch = transactions[(x * tx_limit + space_left):(x + 1) * tx_limit + space_left]
                 self.save_transactions_to_mempool(batch)
 
+    def validate_chain(self):
+        chain = self.get_full_chain()
+
+        for i in range(1, len(chain)):
+            current_block = chain[i]
+            previous_block = chain[i - 1]
+
+            # sprawdź hash poprzedniego bloku
+            previous_hash = self.hm_hash(previous_block)
+
+            if current_block['previous_hash'] != previous_hash:
+                return False, f"Invalid previous hash at block {current_block['index']}"
+
+            # sprawdź proof-of-work
+            if not self.hm_valid_proof(previous_block['proof'], current_block['proof'], previous_hash):
+                return False, f"Invalid proof at block {current_block['index']}"
+
+        return True, "Blockchain is valid."
+
     @staticmethod
     def hm_hash(data):
         #if isinstance(data, dict) and list(data.keys())[0] == 'index':
