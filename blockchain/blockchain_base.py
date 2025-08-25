@@ -79,9 +79,9 @@ class BlockchainBase(ABC):
         """Pomocnicza metoda - kopie blok, gdy mempool >= tx_limit"""
         pending_txs = self.get_pending_transactions(tx_limit)
         self.hm_current_transactions = pending_txs
-
-        proof = self.hm_proof_of_work(self.last_block['proof'], self.last_block['hash'])
-        block = self._create_block(proof, self.last_block['hash'])
+        #print(self.last_block)
+        proof = self.hm_proof_of_work(self.last_block['proof'], self.hm_hash(self.last_block))
+        block = self._create_block(proof, self.hm_hash(self.last_block))
 
         self.save_block_to_db(block, pending_txs)
         self.last_block = block
