@@ -4,18 +4,37 @@ from blockchain.blockchain_base import BlockchainBase
 
 class BlockchainSQLite(BlockchainBase):
     def get_last_block_from_db(self):
+        # Pobranie ostatniego bloku z SQLite
         last_block_db = BlockchainBlockSQLite.query.order_by(BlockchainBlockSQLite.index.desc()).first()
-        if last_block_db:
-            print(f"SQLite Last block loaded: index {last_block_db.index}")
-            return {
-                'index': last_block_db.index,
-                'timestamp': last_block_db.timestamp,
-                'proof': last_block_db.proof,
-                'previous_hash': last_block_db.previous_hash,
-                'merkle_root': last_block_db.merkle_root,
-                'hash': last_block_db.hash
-            }
-        return None
+
+        if not last_block_db:
+            return None
+
+        print(f"SQLite Last block loaded: index {last_block_db.index}")
+
+        # Pobranie transakcji powiązanych z tym blokiem
+        transactions = BlockchainTransactionSQLite.query.filter_by(block_id=last_block_db.id).order_by(
+            BlockchainTransactionSQLite.id).all()
+
+        block_dict = {
+            'index': last_block_db.index,
+            'timestamp': last_block_db.timestamp,
+            'transactions': [
+                {
+                    'id': tx.id,
+                    'sender': tx.sender,
+                    'recipient': tx.recipient,
+                    'amount': tx.amount,
+                    'date': tx.date
+                }
+                for tx in transactions
+            ],
+            'proof': last_block_db.proof,
+            'previous_hash': last_block_db.previous_hash,
+            'merkle_root': last_block_db.merkle_root
+        }
+
+        return block_dict
 
     def save_block_to_db(self, block, transactions):
         db_block = BlockchainBlockSQLite(

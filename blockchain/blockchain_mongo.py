@@ -8,20 +8,39 @@ class BlockchainMongo(BlockchainBase):
         super().__init__()
 
     def get_last_block_from_db(self):
-        last_block = self.mongo.db.blockchain_blocks.find().sort('index', -1).limit(1)
+        last_block = self.mongo.db.blockchain_blocks.find().sort("index", -1).limit(1)
         last_block = list(last_block)
-        if last_block:
-            lb = last_block[0]
-            print(f"Mongo Last block loaded: index {lb['index']}")
-            return {
-                'index': lb['index'],
-                'timestamp': lb['timestamp'],
-                'proof': lb['proof'],
-                'previous_hash': lb['previous_hash'],
-                'merkle_root': lb['merkle_root'],
-                'hash': lb['hash']
-            }
-        return None
+
+        if not last_block:
+            return None
+
+        lb = last_block[0]
+        print(f"Mongo Last block loaded: index {lb['index']}")
+
+        # Pobranie transakcji powiązanych z tym blokiem
+        txs = self.mongo.db.blockchain_transactions.find(
+            {"block_id": lb["_id"]}
+        ).sort("_id", 1)
+
+        block_dict = {
+            "index": lb["index"],
+            "timestamp": lb["timestamp"],
+            "transactions": [
+                {
+                    "_id": tx["_id"],
+                    "sender": tx["sender"],
+                    "recipient": tx["recipient"],
+                    "amount": tx["amount"],
+                    "date": tx["date"]
+                }
+                for tx in txs
+            ],
+            "proof": lb["proof"],
+            "previous_hash": lb["previous_hash"],
+            "merkle_root": lb["merkle_root"]
+        }
+
+        return block_dict
 
     def save_block_to_db(self, block, transactions):
         db_block = {
