@@ -33,7 +33,6 @@ class BlockchainBlockMySQL(db.Model):
     proof = db.Column(db.Integer)
     previous_hash = db.Column(db.String(64))
     merkle_root = db.Column(db.String(64))
-    hash = db.Column(db.String(64))
 
 
 class BlockchainTransactionMySQL(db.Model):
@@ -79,7 +78,6 @@ class BlockchainBlockSQLite(db.Model):
     proof = db.Column(db.Integer)
     previous_hash = db.Column(db.String(64))
     merkle_root = db.Column(db.String(64))
-    hash = db.Column(db.String(64))
 
 
 class BlockchainTransactionSQLite(db.Model):
@@ -129,14 +127,13 @@ class BlockchainMongo:
         self.mempool = mongo.db.mempool_transactions
 
     def insert_block(self, index, timestamp, proof=None,
-                     previous_hash=None, merkle_root=None, hash=None):
+                     previous_hash=None, merkle_root=None):
         block = {
             "index": index,
             "timestamp": timestamp,
             "proof": proof,
             "previous_hash": previous_hash,
-            "merkle_root": merkle_root,
-            "hash": hash
+            "merkle_root": merkle_root
         }
         return self.blocks.insert_one(block)
 
