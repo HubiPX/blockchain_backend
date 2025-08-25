@@ -35,8 +35,8 @@ class BlockchainMongo(BlockchainBase):
         result = self.mongo.db.blockchain_blocks.insert_one(db_block)
         block_id = result.inserted_id
 
-        for tx in transactions:
-            db_tx = {
+        db_txs = [
+            {
                 '_id': tx['_id'],
                 'block_id': block_id,
                 'sender': tx['sender'],
@@ -44,7 +44,10 @@ class BlockchainMongo(BlockchainBase):
                 'amount': tx['amount'],
                 'date': tx['date']
             }
-            self.mongo.db.blockchain_transactions.insert_one(db_tx)
+            for tx in transactions
+        ]
+
+        self.mongo.db.blockchain_transactions.insert_many(db_txs)
 
     def save_transactions_to_mempool(self, transactions):
         if not transactions:
