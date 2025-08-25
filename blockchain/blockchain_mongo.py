@@ -51,8 +51,7 @@ class BlockchainMongo(BlockchainBase):
             'timestamp': block['timestamp'],
             'proof': block['proof'],
             'previous_hash': block['previous_hash'],
-            'merkle_root': block['merkle_root'],
-            'hash': block['hash']
+            'merkle_root': block['merkle_root']
         }
         result = self.mongo.db.blockchain_blocks.insert_one(db_block)
         block_id = result.inserted_id
@@ -98,10 +97,7 @@ class BlockchainMongo(BlockchainBase):
         """Zwraca cały blockchain w kolejności rosnącej po index,
            z transakcjami w odpowiednim miejscu w bloku"""
 
-        blocks = self.mongo.db.blockchain_blocks.find(
-            {},
-            {"hash": 0}
-        ).sort("index", 1)
+        blocks = self.mongo.db.blockchain_blocks.find().sort("index", 1)
 
         chain = []
         for block in blocks:

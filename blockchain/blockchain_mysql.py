@@ -46,7 +46,6 @@ class BlockchainMYSQL(BlockchainBase):
             proof=block['proof'],
             previous_hash=block['previous_hash'],
             merkle_root=block['merkle_root'],
-            hash=block['hash'],
         )
         db.session.add(db_block)
         db.session.flush()
@@ -101,10 +100,7 @@ class BlockchainMYSQL(BlockchainBase):
         for block in blocks:
             # Pobierz transakcje powiązane z tym blokiem
             txs = BlockchainTransactionMySQL.query.filter_by(
-                block_id=block.id
-            ).order_by(
-                BlockchainTransactionMySQL.id.asc()
-            ).all()
+                block_id=block.id).order_by(BlockchainTransactionMySQL.id.asc()).all()
 
             chain.append({
                 'index': block.index,

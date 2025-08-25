@@ -45,8 +45,7 @@ class BlockchainSQLite(BlockchainBase):
             timestamp=block['timestamp'],
             proof=block['proof'],
             previous_hash=block['previous_hash'],
-            merkle_root=block['merkle_root'],
-            hash=block['hash'],
+            merkle_root=block['merkle_root']
         )
         db.session.add(db_block)
         db.session.flush()
@@ -98,10 +97,7 @@ class BlockchainSQLite(BlockchainBase):
         for block in blocks:
             # Pobierz transakcje powiązane z tym blokiem
             txs = BlockchainTransactionSQLite.query.filter_by(
-                block_id=block.id
-            ).order_by(
-                BlockchainTransactionSQLite.id.asc()
-            ).all()
+                block_id=block.id).order_by(BlockchainTransactionSQLite.id.asc()).all()
 
             chain.append({
                 'index': block.index,
