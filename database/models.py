@@ -1,5 +1,4 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -103,7 +102,7 @@ class MempoolTransactionSQLite(db.Model):
     sender = db.Column(db.String(20), nullable=False)
     recipient = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
-    date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
 
 
 #  MongoDB - bez modelu ORM, przykład prostego wrappera:
@@ -114,8 +113,6 @@ class TransactionsMongo:
         self.collection = mongo.db.transactions
 
     def insert_transaction(self, sender, recipient, amount, date=None):
-        if date is None:
-            date = datetime.utcnow()
         tx = {
             "sender": sender,
             "recipient": recipient,
@@ -131,10 +128,8 @@ class BlockchainMongo:
         self.transactions = mongo.db.blockchain_transactions
         self.mempool = mongo.db.mempool_transactions
 
-    def insert_block(self, index, timestamp=None, proof=None,
+    def insert_block(self, index, timestamp, proof=None,
                      previous_hash=None, merkle_root=None, hash=None):
-        if timestamp is None:
-            timestamp = datetime.utcnow()
         block = {
             "index": index,
             "timestamp": timestamp,
@@ -151,16 +146,11 @@ class BlockchainMongo:
             transactions_data = [transactions_data]
 
         for tx in transactions_data:
-            # jeśli nie ma daty, ustaw domyślną
-            if "date" not in tx or tx["date"] is None:
-                tx["date"] = datetime.utcnow()
             if block_id is not None:
                 tx["block_id"] = block_id
         return self.transactions.insert_many(transactions_data)
 
     def insert_mempool_transaction(self, sender, recipient, amount, date=None):
-        if date is None:
-            date = datetime.utcnow()
         tx = {
             "sender": sender,
             "recipient": recipient,
