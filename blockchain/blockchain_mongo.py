@@ -43,6 +43,9 @@ class BlockchainMongo(BlockchainBase):
         return block_dict
 
     def save_block_to_db(self, block, transactions):
+        if not transactions:
+            transactions = []
+
         db_block = {
             'index': block['index'],
             'timestamp': block['timestamp'],
