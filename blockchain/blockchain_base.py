@@ -57,6 +57,7 @@ class BlockchainBase(ABC):
 
     def _create_block(self, hm_proof, hm_previous_hash):
         block_index = self.last_block['index'] + 1 if self.last_block else 1
+
         block_data = {
             'index': block_index,
             'timestamp': datetime.utcnow().replace(microsecond=(datetime.utcnow().microsecond // 1000) * 1000),
@@ -66,7 +67,7 @@ class BlockchainBase(ABC):
             'merkle_root': self.create_merkle_root(self.hm_current_transactions)
         }
         self.hm_current_transactions = []
-        block_data['hash'] = self.hm_hash(block_data)
+
         return block_data
 
     def _create_genesis_block(self):
