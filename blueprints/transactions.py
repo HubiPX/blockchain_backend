@@ -269,11 +269,11 @@ def generate_random_transactions():
         sqlite_session.remove()
 
 
-@transactions.route('/validate', methods=["GET"])
+@transactions.route('/validate', methods=["POST"])
 @Auth.logged_rcon
 def validate_blockchains():
-    # Pobieramy opcjonalny parametr 'name' z query string
-    blockchain_name = None
+    data = request.get_json()
+    blockchain_name = data.get("blockchain_name")
 
     results = {}
     all_valid = True
@@ -296,7 +296,7 @@ def validate_blockchains():
             is_valid, message = blockchain.validate_chain()
             results[name] = {
                 "valid": is_valid,
-                "message": message
+                "message": name + " " + message
             }
             if not is_valid:
                 all_valid = False
