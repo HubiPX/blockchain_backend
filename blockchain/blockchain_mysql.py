@@ -88,19 +88,20 @@ class BlockchainMYSQL(BlockchainBase):
         MempoolTransactionMySQL.query.filter(MempoolTransactionMySQL.id.in_(ids)).delete(synchronize_session=False)
         db.session.commit()
 
-    def get_full_chain(self) -> list[dict]:
-        """Zwraca cały blockchain z MySQL w kolejności rosnącej po index,
-           wraz z transakcjami przypisanymi do każdego bloku"""
-
-        blocks = BlockchainBlockMySQL.query.order_by(
-            BlockchainBlockMySQL.index.asc()
-        ).all()
+    def get_chain_batch(self, offset: int, limit: int) -> list[dict]:
+        """Pobiera fragment blockchaina z bazy (paginacja)."""
+        blocks = (BlockchainBlockMySQL.query
+                  .order_by(BlockchainBlockMySQL.index.asc())
+                  .offset(offset)
+                  .limit(limit)
+                  .all())
 
         chain = []
         for block in blocks:
-            # Pobierz transakcje powiązane z tym blokiem
-            txs = BlockchainTransactionMySQL.query.filter_by(
-                block_id=block.id).order_by(BlockchainTransactionMySQL.id.asc()).all()
+            txs = (BlockchainTransactionMySQL.query
+                   .filter_by(block_id=block.id)
+                   .order_by(BlockchainTransactionMySQL.id.asc())
+                   .all())
 
             chain.append({
                 'index': block.index,

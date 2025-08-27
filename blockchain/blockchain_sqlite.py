@@ -85,19 +85,20 @@ class BlockchainSQLite(BlockchainBase):
         MempoolTransactionSQLite.query.filter(MempoolTransactionSQLite.id.in_(ids)).delete(synchronize_session=False)
         db.session.commit()
 
-    def get_full_chain(self) -> list[dict]:
-        """Zwraca cały blockchain z MySQL w kolejności rosnącej po index,
-           wraz z transakcjami przypisanymi do każdego bloku"""
-
-        blocks = BlockchainBlockSQLite.query.order_by(
-            BlockchainBlockSQLite.index.asc()
-        ).all()
+    def get_chain_batch(self, offset: int, limit: int) -> list[dict]:
+        """Pobiera fragment blockchaina z bazy (paginacja)."""
+        blocks = (BlockchainBlockSQLite.query
+                  .order_by(BlockchainBlockSQLite.index.asc())
+                  .offset(offset)
+                  .limit(limit)
+                  .all())
 
         chain = []
         for block in blocks:
-            # Pobierz transakcje powiązane z tym blokiem
-            txs = BlockchainTransactionSQLite.query.filter_by(
-                block_id=block.id).order_by(BlockchainTransactionSQLite.id.asc()).all()
+            txs = (BlockchainTransactionSQLite.query
+                   .filter_by(block_id=block.id)
+                   .order_by(BlockchainTransactionSQLite.id.asc())
+                   .all())
 
             chain.append({
                 'index': block.index,

@@ -93,17 +93,24 @@ class BlockchainMongo(BlockchainBase):
         ids = [tx['_id'] for tx in transactions]
         self.mongo.db.mempool_transactions.delete_many({'_id': {'$in': ids}})
 
-    def get_full_chain(self) -> list[dict]:
-        """Zwraca cały blockchain w kolejności rosnącej po index,
-           z transakcjami w odpowiednim miejscu w bloku"""
+    def get_chain_batch(self, offset: int, limit: int) -> list[dict]:
+        """Pobiera fragment blockchaina z MongoDB w kolejności rosnącej po index."""
 
-        blocks = self.mongo.db.blockchain_blocks.find().sort("index", 1)
+        blocks = (
+            self.mongo.db.blockchain_blocks
+            .find()
+            .sort("index", 1)
+            .skip(offset)
+            .limit(limit)
+        )
 
         chain = []
         for block in blocks:
-            txs = self.mongo.db.blockchain_transactions.find(
-                {"block_id": block["_id"]}
-            ).sort("_id", 1)
+            txs = (
+                self.mongo.db.blockchain_transactions
+                .find({"block_id": block["_id"]})
+                .sort("_id", 1)
+            )
 
             block_dict = {
                 "index": block["index"],
@@ -114,16 +121,15 @@ class BlockchainMongo(BlockchainBase):
                         "sender": tx["sender"],
                         "recipient": tx["recipient"],
                         "amount": tx["amount"],
-                        "date": tx["date"]
+                        "date": tx["date"],
                     }
                     for tx in txs
                 ],
                 "proof": block["proof"],
                 "previous_hash": block["previous_hash"],
-                "merkle_root": block["merkle_root"]
+                "merkle_root": block["merkle_root"],
             }
 
             chain.append(block_dict)
 
         return chain
-

@@ -39,8 +39,8 @@ class BlockchainBase(ABC):
         pass
 
     @abstractmethod
-    def get_full_chain(self) -> list[dict]:
-        """Zwraca cały blockchain z bazy w kolejności od genesis do ostatniego"""
+    def get_chain_batch(self, offset, limit) -> list[dict]:
+        """Zwraca ustaloną ilość bloków z bazy sortując po index"""
         pass
 
     def hm_proof_of_work(self, hm_last_proof, block_hash):
@@ -121,24 +121,40 @@ class BlockchainBase(ABC):
                 batch = transactions[(x * tx_limit + space_left):(x + 1) * tx_limit + space_left]
                 self.save_transactions_to_mempool(batch)
 
-    def validate_chain(self):
-        chain = self.get_full_chain()
+    def validate_chain(self, batch_size: int = 50):
+        last_block = None
+        offset = 0
+        highest_index = 0  # zapamiętujemy największy index
 
-        for i in range(1, len(chain)):
-            current_block = chain[i]
-            previous_block = chain[i - 1]
+        while True:
+            batch = self.get_chain_batch(offset, batch_size)
+            if not batch:
+                break
 
-            # sprawdź hash poprzedniego bloku
-            previous_hash = self.hm_hash(previous_block)
+            for i, current_block in enumerate(batch):
+                if last_block:
+                    previous_block = last_block
+                elif i > 0:
+                    previous_block = batch[i - 1]
+                else:
+                    previous_block = None
 
-            if current_block['previous_hash'] != previous_hash:
-                return False, f"Invalid previous hash at block {current_block['index']}"
+                if previous_block:
+                    # sprawdź hash poprzedniego bloku
+                    previous_hash = self.hm_hash(previous_block)
+                    if current_block['previous_hash'] != previous_hash:
+                        return False, f"Invalid previous hash at block {current_block['index']}"
 
-            # sprawdź proof-of-work
-            if not self.hm_valid_proof(previous_block['proof'], current_block['proof'], previous_hash):
-                return False, f"Invalid proof at block {current_block['index']}"
+                    # sprawdź proof-of-work
+                    if not self.hm_valid_proof(previous_block['proof'], current_block['proof'], previous_hash):
+                        return False, f"Invalid proof at block {current_block['index']}"
 
-        return True, f"Blockchain is valid. {len(chain)} blocks"
+                last_block = current_block
+                highest_index = current_block['index']  # aktualizuj
+
+            offset += batch_size
+
+        return True, f"Blockchain is valid. {highest_index} blocks"
 
     @staticmethod
     def hm_hash(data):
