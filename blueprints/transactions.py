@@ -296,7 +296,7 @@ def validate_blockchains():
             is_valid, message = blockchain.validate_chain()
             results[name] = {
                 "valid": is_valid,
-                "message": name + " " + message
+                "message": name.upper() + " " + message
             }
             if not is_valid:
                 all_valid = False
