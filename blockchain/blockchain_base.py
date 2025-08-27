@@ -88,7 +88,7 @@ class BlockchainBase(ABC):
 
         self.clear_pending_transactions(pending_txs)
 
-    def hm_add_transaction_to_mempool(self, transactions, tx_limit=5):
+    def hm_add_transaction_to_mempool(self, transactions, tx_limit=30):
         if not isinstance(transactions, list):
             transactions = [transactions]
 
@@ -138,7 +138,7 @@ class BlockchainBase(ABC):
             if not self.hm_valid_proof(previous_block['proof'], current_block['proof'], previous_hash):
                 return False, f"Invalid proof at block {current_block['index']}"
 
-        return True, "Blockchain is valid."
+        return True, f"Blockchain is valid. {len(chain)} blocks"
 
     @staticmethod
     def hm_hash(data):
