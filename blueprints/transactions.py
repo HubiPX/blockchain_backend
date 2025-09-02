@@ -305,3 +305,36 @@ def validate_blockchains():
         return jsonify({"status": "ok", "results": results}), 200
     else:
         return jsonify({"status": "error", "results": results}), 400
+
+
+@transactions.route('/merkle_tree', methods=["POST"])
+@Auth.logged_rcon
+def check_merkle_tree():
+    data = request.get_json()
+    blockchain_name = data.get("blockchain_name")
+    block_index = data.get("block_index")
+    tx_id = data.get("tx_id")
+
+    if not blockchain_name or block_index is None or tx_id is None:
+        return 'Brak danych: nazwy blockchainu, id bloku lub id transakcji.', 400
+
+    blockchain = current_app.blockchains.get(blockchain_name)  # type: ignore
+    if blockchain is None:
+        return f'Nie znaleziono Blockchainu {blockchain_name}', 404
+
+    # pobierz dowód Merkle dla transakcji
+    proof_data = blockchain.get_transaction_proof(block_index=block_index, tx_id=tx_id)
+    if not proof_data:
+        return f'Nie znaleziono transakcji {tx_id} w bloku {block_index} .', 404
+
+    # weryfikacja dowodu
+    result = blockchain.verify_merkle_proof(
+        transaction=proof_data["transaction"],
+        proof=proof_data["proof"],
+        merkle_root=proof_data["merkle_root"]
+    )
+
+    if result:
+        return f'Transakcja {tx_id} jest poprawna w bloku {block_index}', 200
+    else:
+        return f'Drzewo Merkla NIE jest prawidłowe dla transakcji {tx_id} w bloku {block_index}', 400

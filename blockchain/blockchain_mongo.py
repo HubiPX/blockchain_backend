@@ -133,3 +133,36 @@ class BlockchainMongo(BlockchainBase):
             chain.append(block_dict)
 
         return chain
+
+    def get_transaction_proof(self, block_index: int, tx_id):
+        block = self.mongo.db.blockchain_blocks.find_one({"index": block_index})
+        if not block:
+            return None
+
+        txs = list(
+            self.mongo.db.blockchain_transactions
+            .find({"block_id": block["_id"]})
+            .sort("_id", 1)
+        )
+
+        transactions = [
+            {
+                "_id": tx["_id"],
+                "sender": tx["sender"],
+                "recipient": tx["recipient"],
+                "amount": tx["amount"],
+                "date": tx["date"]
+            }
+            for tx in txs
+        ]
+
+        tx_index = next((i for i, tx in enumerate(transactions) if str(tx["_id"]) == str(tx_id)), None)
+        if tx_index is None:
+            return None
+
+        proof = self.get_merkle_proof(transactions, tx_index)
+        return {
+            "transaction": transactions[tx_index],
+            "proof": proof,
+            "merkle_root": block["merkle_root"]
+        }

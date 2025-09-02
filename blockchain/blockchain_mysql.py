@@ -122,3 +122,26 @@ class BlockchainMYSQL(BlockchainBase):
             })
 
         return chain
+
+    def get_transaction_proof(self, block_index: int, tx_id: int):
+        block = BlockchainBlockMySQL.query.filter_by(index=block_index).first()
+        if not block:
+            return None
+
+        txs = BlockchainTransactionMySQL.query.filter_by(block_id=block.id).order_by(BlockchainTransactionMySQL.id.asc()).all()
+        transactions = [
+            {"id": tx.id, "sender": tx.sender, "recipient": tx.recipient, "amount": tx.amount, "date": tx.date}
+            for tx in txs
+        ]
+
+        # znajdź index transakcji w bloku
+        tx_index = next((i for i, tx in enumerate(transactions) if tx["id"] == tx_id), None)
+        if tx_index is None:
+            return None
+
+        proof = self.get_merkle_proof(transactions, tx_index)
+        return {
+            "transaction": transactions[tx_index],
+            "proof": proof,
+            "merkle_root": block.merkle_root
+        }

@@ -172,3 +172,52 @@ class BlockchainBase(ABC):
             hashes = [hashlib.sha256((hashes[i] + hashes[i+1]).encode()).hexdigest()
                       for i in range(0, len(hashes), 2)]
         return hashes[0]
+
+    def get_merkle_proof(self, transactions: list[dict], tx_index: int) -> list[dict]:
+        """
+        Zwraca Merkle Proof dla transakcji o danym indeksie w bloku.
+        Proof to lista słowników: { 'position': 'left'/'right', 'hash': <string> }
+        """
+        if not transactions:
+            return []
+
+        # Oblicz hash każdej transakcji
+        hashes = [self.hm_hash(tx) for tx in transactions]
+        index = tx_index
+        proof = []
+
+        while len(hashes) > 1:
+            if len(hashes) % 2 != 0:
+                hashes.append(hashes[-1])
+
+            new_hashes = []
+            for i in range(0, len(hashes), 2):
+                left, right = hashes[i], hashes[i+1]
+
+                # jeśli nasza transakcja była w tej parze → zapisz sąsiada do ścieżki
+                if i == index or i+1 == index:
+                    if index == i:  # nasz hash był po lewej
+                        proof.append({"position": "right", "hash": right})
+                    else:  # nasz hash był po prawej
+                        proof.append({"position": "left", "hash": left})
+                    index = len(new_hashes)
+
+                new_hashes.append(hashlib.sha256((left + right).encode()).hexdigest())
+
+            hashes = new_hashes
+
+        return proof
+
+    def verify_merkle_proof(self, transaction: dict, proof: list[dict], merkle_root: str) -> bool:
+        """
+        Weryfikuje dowód Merkle Proof dla podanej transakcji.
+        """
+        current_hash = self.hm_hash(transaction)
+
+        for step in proof:
+            if step["position"] == "left":
+                current_hash = hashlib.sha256((step["hash"] + current_hash).encode()).hexdigest()
+            else:  # right
+                current_hash = hashlib.sha256((current_hash + step["hash"]).encode()).hexdigest()
+
+        return current_hash == merkle_root
