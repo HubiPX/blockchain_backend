@@ -1,6 +1,6 @@
 import string
 from random import choices
-from flask import Blueprint, session, request
+from flask import Blueprint, session, request, jsonify
 from database.models import db
 from database.models import Users
 from database.hash import Hash
@@ -36,9 +36,9 @@ def _set_score_(user_id):
     you = Users.query.filter_by(id=your_id).first()
 
     if not Users.query.filter_by(id=user_id).first():
-        return 'Brak takiego uzytkownika.', 404
+        return jsonify({"message": 'Brak takiego uzytkownika.'}), 404
     elif int(user.admin) > int(you.admin):
-        return 'Poziom admina tego użytkownika jest większy niż twój!', 403
+        return jsonify({"message": "Poziom admina tego użytkownika jest większy niż twój!"}), 403
 
     post = request.get_json()
     new_score = post.get("new_score")
@@ -46,15 +46,15 @@ def _set_score_(user_id):
     try:
         score = int(new_score)
     except ValueError:
-        return 'Wprowadzona wartość nie jest liczbą.', 400
+        return jsonify({"message": "Wprowadzona wartość nie jest liczbą."}), 400
 
     if not score >= 0:
-        return 'Wprowadz liczbę większą od 0.', 400
+        return jsonify({"message": "Wprowadz liczbę większą od 0."}), 400
 
     user.score = score
 
     db.session.commit()
-    return f'Ustawiono ilość expa użytkownikowi {user.username} na: {user.score}!', 200
+    return jsonify({"message": f"Ustawiono ilość expa użytkownikowi {user.username} na: {user.score}!"}), 200
 
 
 @admin.route("<user_id>/reset-password", methods=['get'])
@@ -65,9 +65,9 @@ def _reset_password_(user_id):
     you = Users.query.filter_by(id=your_id).first()
 
     if not user:
-        return 'Brak takiego użytkownika.', 404
+        return jsonify({"message": "Brak takiego użytkownika."}), 404
     elif int(user.admin) >= int(you.admin):
-        return 'Twój poziom admina jest zbyt niski.', 403
+        return jsonify({"message": "Twój poziom admina jest zbyt niski."}), 403
 
     characters = string.ascii_lowercase + string.digits
     new_password = ''.join(choices(characters, k=6))
@@ -75,7 +75,7 @@ def _reset_password_(user_id):
 
     user.password = hash_pwd
     db.session.commit()
-    return {"new_password": new_password}
+    return jsonify({"new_password": new_password})
 
 
 @admin.route("<user_id>/lvl-admin", methods=['post'])
@@ -88,31 +88,31 @@ def _lvl_admin_(user_id):
     try:
         int(is_admin)
     except ValueError:
-        return 'Wprowadzona wartość nie jest liczbą.', 400
+        return jsonify({"message": "Wprowadzona wartość nie jest liczbą."}), 400
 
     if len(is_admin) > 1 and is_admin[0] == '1':
         if 1 <= int(is_admin[1:]) < 366:
             days = int(is_admin[1:])
             is_admin = '1'
         elif is_admin[0] == '1':
-            return 'Błędna ilość dni dla VIPa wprowadź 1-365.', 400
+            return jsonify({"message": "Błędna ilość dni dla VIPa, wprowadź 1-365."}), 400
     elif len(is_admin) == 1 and is_admin[0] == '1':
-        return 'Nie wprowadzono ilości dni!', 400
+        return jsonify({"message": "Nie wprowadzono ilości dni!"}), 400
 
     your_id = session.get("user_id")
     you = Users.query.filter_by(id=your_id).first()
     user = Users.query.filter_by(id=user_id).first()
 
     if not user:
-        return 'Brak takiego użytkownika.', 404
+        return jsonify({"message": "Brak takiego użytkownika."}), 404
     elif user.id == 1:
-        return 'Nie można zmieniać poziomu admina RCON!', 403
+        return jsonify({"message": "Nie można zmieniać poziomu admina RCON!"}), 403
     elif not re.match("^[0-4]*$", is_admin):
-        return 'Podano błędny poziom admina.', 400
+        return jsonify({"message": "Podano błędny poziom admina."}), 400
     elif int(user.admin) >= int(you.admin):
-        return 'Twój poziom admina musi być większy niż użytkownika.', 403
+        return jsonify({"message": "Twój poziom admina musi być większy niż użytkownika."}), 403
     elif int(you.admin) <= int(is_admin):
-        return 'Twój poziom admina musi być większy niż chcesz ustawić!', 403
+        return jsonify({"message": "Twój poziom admina musi być większy niż chcesz ustawić!"}), 403
 
     if is_admin == '1':
         if user.vip_date is None:
@@ -128,7 +128,7 @@ def _lvl_admin_(user_id):
     user.admin = is_admin
 
     db.session.commit()
-    return f'Użytkownik {user.username} ma teraz poziom admina: {user.admin}!', 200
+    return jsonify({"message": f"Użytkownik {user.username} ma teraz poziom admina: {user.admin}!"}), 200
 
 
 @admin.route("/<user_id>/delete", methods=['post'])
@@ -139,11 +139,11 @@ def _delete_(user_id):
     you = Users.query.filter_by(id=your_id).first()
 
     if not Users.query.filter_by(id=user_id).first():
-        return 'Brak takiego użytkownika.', 404
+        return jsonify({"message": "Brak takiego użytkownika."}), 404
     elif user_id == "1":
-        return 'Nie można banować i usuwać RCON admina!', 403
+        return jsonify({"message": "Nie można banować i usuwać RCON admina!"}), 403
     elif int(user.admin) >= int(you.admin):
-        return 'Twój poziom admina musi być większy niż użytkownika.', 403
+        return jsonify({"message": "Twój poziom admina musi być większy niż użytkownika."}), 403
 
     post = request.get_json()
     days = post.get("days")
@@ -151,7 +151,7 @@ def _delete_(user_id):
     try:
         time = int(days)
     except ValueError:
-        return 'Wprowadzona wartość nie jest liczbą.', 400
+        return jsonify({"message": "Wprowadzona wartość nie jest liczbą."}), 400
 
     if time == 0:
         user.ban_date = None
@@ -165,6 +165,7 @@ def _delete_(user_id):
         Users.query.filter_by(id=user_id).delete()
         alert = f'Usunołeś użytkownika {user.username}!'
     else:
-        return 'Wprowadz liczbę dni od 0 - 365 lub kod usuwania.', 400
+        return jsonify({"message": "Wprowadz liczbę dni od 0-365 lub kod usuwania."}), 400
     db.session.commit()
-    return alert, 200
+    return jsonify({"message": alert}), 200
+

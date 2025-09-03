@@ -1,4 +1,4 @@
-from flask import Blueprint, session, request
+from flask import Blueprint, session, request, jsonify
 from sqlalchemy import desc
 from database.models import db
 from database.models import Users, TransactionsMySQL
@@ -18,27 +18,27 @@ def _create_():
     username = post.get("username")
 
     if password != repassword:
-        return 'Podane hasła są różne!', 406
+        return jsonify({"message": "Podane hasła są różne!"}), 406
 
     if len(password) < 3:
-        return 'Hasło jest za krótkie!', 400
+        return jsonify({"message": "Hasło jest za krótkie!"}), 400
     elif len(username) < 3:
-        return 'Login jest za krótki!', 400
+        return jsonify({"message": "Login jest za krótki!"}), 400
     elif len(password) > 20:
-        return 'Hasło jest za długie!', 400
+        return jsonify({"message": "Hasło jest za długie!"}), 400
     elif len(username) > 15:
-        return 'Login jest za długi!', 400
+        return jsonify({"message": "Login jest za długi!"}), 400
 
     hash_pwd = Hash.hash_password(password)
 
     if Users.query.filter_by(username=username).first():
-        return 'Jest już użytkownik o takim nicku.', 406
+        return jsonify({"message": "Jest już użytkownik o takim nicku."}), 406
 
     new_user = Users(username=username, password=hash_pwd)
 
     db.session.add(new_user)
     db.session.commit()
-    return 'Utworzono konto pomyślnie!', 201
+    return jsonify({"message": "Utworzono konto pomyślnie!"}), 201
 
 
 @users.route('/stats', methods=['GET'])
@@ -55,15 +55,15 @@ def _stats_():
     user_id = user.id if user else None
 
     if page < 1:
-        return {"error": "Numer strony musi być większy lub równy 1."}, 400
+        return jsonify({"message": "Numer strony musi być większy lub równy 1."}), 400
     elif page > max_page and total_users > 0:
-        return {"error": f"Strona {page} nie istnieje. Maksymalna strona to {max_page}."}, 400
+        return jsonify({"message": f"Strona {page} nie istnieje. Maksymalna strona to {max_page}."}), 400
     elif total_users == 0:
-        return {
+        return jsonify({
             "page": page,
             "max_page": 0,
             "users": []
-        }, 200
+        }), 200
 
     offset = (page - 1) * per_page
 
@@ -72,7 +72,7 @@ def _stats_():
         desc(Users.last_login)
     ).offset(offset).limit(per_page).all()
 
-    return {
+    return jsonify({
         "score": user_score,
         "user_id": user_id,
         "page": page,
@@ -85,7 +85,7 @@ def _stats_():
             "vip_date": u.vip_date,
             "place": (page - 1) * per_page + i + 1
         } for i, u in enumerate(paged_users)]
-    }, 200
+    }), 200
 
 
 @users.route('/top_3', methods=['GET'])
@@ -94,12 +94,12 @@ def get_top_3():
         desc(Users.score),
         desc(Users.last_login)
     ).limit(3).all()
-    return [{
+    return jsonify([{
         "username": x.username,
         "admin": x.admin,
         "score": x.score,
         "place": top_users.index(x) + 1
-    } for x in top_users]
+    } for x in top_users])
 
 
 @users.route('/change-password', methods=['post'])
@@ -112,26 +112,26 @@ def _change_password_():
     new_pwd2 = post.get("new_password2")
 
     if new_pwd != new_pwd2:
-        return 'Nowe hasła są różne.', 406
+        return jsonify({"message": "Nowe hasła są różne."}), 406
 
     if not current_pwd or not new_pwd or not new_pwd2:
-        return 'Wypełnij wszystkie pola.', 400
+        return jsonify({"message": "Wypełnij wszystkie pola."}), 400
     elif len(new_pwd) < 3:
-        return 'Nowe hasło jest za krótkie.', 400
+        return jsonify({"message": "Nowe hasło jest za krótkie."}), 400
     elif len(new_pwd) > 20:
-        return 'Nowe hasło jest za długie.', 400
+        return jsonify({"message": "Nowe hasło jest za długie."}), 400
     elif current_pwd == new_pwd:
-        return 'Nowe hasło musi być inne niż obecne.', 400
+        return jsonify({"message": "Nowe hasło musi być inne niż obecne."}), 400
 
     user = Users.query.filter_by(id=session["user_id"]).first()
 
     if not Hash.verify_password(user.password, current_pwd):
-        return 'Stare hasło jest błędne.', 400
+        return jsonify({"message": "Stare hasło jest błędne."}), 400
 
     pwd_hash = Hash.hash_password(new_pwd)
     user.password = pwd_hash
     db.session.commit()
-    return '', 200
+    return jsonify({"message": ""}), 200
 
 
 @users.route('/last_3_transactions', methods=['GET'])
@@ -140,11 +140,11 @@ def get_last_3_transactions():
         desc(TransactionsMySQL.id)
     ).limit(3).all()
 
-    return [{
+    return jsonify([{
         "sender": t.sender,
         "recipient": t.recipient,
         "amount": t.amount
-    } for t in recent_transactions]
+    } for t in recent_transactions])
 
 
 @users.route('/transactions', methods=['POST'])
@@ -162,15 +162,15 @@ def transactions():
     user_id = user.id if user else None
 
     if page < 1:
-        return {"error": "Numer strony musi być większy lub równy 1."}, 400
+        return jsonify({"message": "Numer strony musi być większy lub równy 1."}), 400
     elif page > max_page and total_transactions > 0:
-        return {"error": f"Strona {page} nie istnieje. Maksymalna strona to {max_page}."}, 400
+        return jsonify({"message": f"Strona {page} nie istnieje. Maksymalna strona to {max_page}."}), 400
     elif total_transactions == 0:
-        return {
+        return jsonify({
             "page": page,
             "max_page": 0,
             "transactions": []
-        }, 200
+        }), 200
 
     offset = (page - 1) * per_page
 
@@ -178,7 +178,7 @@ def transactions():
         desc(TransactionsMySQL.id)
     ).offset(offset).limit(per_page).all()
 
-    return {
+    return jsonify({
         "score": user_score,
         "user_id": user_id,
         "page": page,
@@ -189,6 +189,7 @@ def transactions():
             "amount": x.amount,
             "date": x.date
         } for x in transactions]
-    }, 200
+    }), 200
+
 
 

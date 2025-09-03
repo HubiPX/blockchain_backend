@@ -1,4 +1,4 @@
-from flask import Blueprint, request, session
+from flask import Blueprint, request, session, jsonify
 from database.models import Users
 from database.models import db
 from database.hash import Hash
@@ -15,16 +15,16 @@ def _login_():
     password = post.get("password")
 
     if not username:
-        return 'Brak nazwy użytkownika!', 400
+        return jsonify({"message": "Brak nazwy użytkownika!"}), 400
     elif not password:
-        return 'Brak hasła!', 400
+        return jsonify({"message": "Brak hasła!"}), 400
 
     user = Users.query.filter_by(username=username).first()
 
     if not user:
-        return 'Brak użytkownika o tym nicku!', 401
+        return jsonify({"message": "Brak użytkownika o tym nicku!"}), 401
     elif not Hash.verify_password(user.password, password):
-        return 'Podane hasło jest nieprawidłowe!', 401
+        return jsonify({"message": "Podane hasło jest nieprawidłowe!"}), 401
 
     today = datetime.datetime.now()
 
@@ -32,7 +32,7 @@ def _login_():
         if user.ban_date < today:
             user.ban_date = None
         else:
-            return {"ban_date": user.ban_date}, 403
+            return jsonify({"ban_date": user.ban_date}), 403
 
     if user.last_login is None:
         user.last_login = today

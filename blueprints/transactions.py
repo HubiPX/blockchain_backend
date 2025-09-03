@@ -22,27 +22,27 @@ def transfer_score():
 
     # Walidacja danych
     if not recipient_username or amount is None:
-        return 'Brak danych: odbiorcy lub ilości punktów.', 400
+        return jsonify({"message": "Brak danych: odbiorcy lub ilości punktów."}), 400
 
     try:
         amount = int(amount)
     except ValueError:
-        return 'Ilość punktów musi być liczbą całkowitą.', 400
+        return jsonify({"message": "Ilość punktów musi być liczbą całkowitą."}), 400
 
     if amount <= 0:
-        return 'Ilość punktów musi być większa niż zero.', 400
+        return jsonify({"message": "Ilość punktów musi być większa niż zero."}), 400
 
     sender = Users.query.filter_by(id=session["user_id"]).first()
     recipient = Users.query.filter_by(username=recipient_username).first()
 
     if recipient_username == sender.username:
-        return 'Nie możesz wysłać punktów do siebie.', 400
+        return jsonify({"message": "Nie możesz wysłać punktów do siebie."}), 400
 
     if not recipient:
-        return 'Użytkownik odbierający nie istnieje.', 404
+        return jsonify({"message": "Użytkownik odbierający nie istnieje."}), 404
 
     if sender.score < amount:
-        return 'Nie masz wystarczającej liczby punktów do przesłania.', 400
+        return jsonify({"message": "Nie masz wystarczającej liczby punktów do przesłania."}), 400
 
     # Transfer punktów
     sender.score -= amount
@@ -94,13 +94,13 @@ def transfer_score():
         # Zapis do Mongo
         current_app.blockchains["mongo"].hm_add_transaction_to_mempool(tx)  # type: ignore
 
-        return f'Pomyślnie przesłano {amount} punktów do {recipient_username}.', 200
+        return jsonify({"message": f"Pomyślnie przesłano {amount} punktów do {recipient_username}."}), 200
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return f'Wystąpił błąd przy zapisie transakcji: {str(e)}', 500
+        return jsonify({"message": f"Wystąpił błąd przy zapisie transakcji: {str(e)}"}), 500
     except Exception as e:
-        return f'Wystąpił nieoczekiwany błąd: {str(e)}', 500
+        return jsonify({"message": f"Wystąpił nieoczekiwany błąd: {str(e)}"}), 500
 
 
 @transactions.route('/generate-random-transactions', methods=['POST'])
@@ -113,15 +113,15 @@ def generate_random_transactions():
     count = data.get("count")
 
     if not isinstance(count, int) or count <= 0:
-        return "Nieprawidłowa liczba transakcji.", 400
+        return jsonify({"message": "Nieprawidłowa liczba transakcji."}), 400
 
     max_transactions = 10000
     if count > max_transactions:
-        return f"Maksymalna dozwolona liczba transakcji to {max_transactions}.", 400
+        return jsonify({"message": f"Maksymalna dozwolona liczba transakcji to {max_transactions}."}), 400
 
     all_users = Users.query.all()
     if len(all_users) < 2:
-        return "Za mało użytkowników do wykonania transakcji.", 400
+        return jsonify({"message": "Za mało użytkowników do wykonania transakcji."}), 400
 
     user_scores = {user.username: user.score for user in all_users}
 
@@ -263,7 +263,7 @@ def generate_random_transactions():
     except Exception as e:
         db.session.rollback()
         sqlite_session.rollback()
-        return f"Błąd przy zapisie transakcji: {str(e)}", 500
+        return jsonify({"message": f"Błąd przy zapisie transakcji: {str(e)}"}), 500
 
     finally:
         sqlite_session.remove()
@@ -282,7 +282,7 @@ def validate_blockchains():
         # Sprawdzamy tylko wybrany blockchain
         blockchain = current_app.blockchains.get(blockchain_name)  # type: ignore
         if blockchain is None:
-            return jsonify({"status": "error", "message": f"Blockchain '{blockchain_name}' not found"}), 404
+            return jsonify({"message": f"Blockchain '{blockchain_name}' not found"}), 404
 
         is_valid, message = blockchain.validate_chain()
         results[blockchain_name] = {
@@ -302,9 +302,9 @@ def validate_blockchains():
                 all_valid = False
 
     if all_valid:
-        return jsonify({"status": "ok", "results": results}), 200
+        return jsonify({"status": "ok", "message": results}), 200
     else:
-        return jsonify({"status": "error", "results": results}), 400
+        return jsonify({"status": "error", "message": results}), 400
 
 
 @transactions.route('/merkle_tree', methods=["POST"])
@@ -316,22 +316,16 @@ def check_merkle_tree():
     tx_id = data.get("tx_id")
 
     if not blockchain_name or block_index is None or tx_id is None:
-        return jsonify({
-            "status": "ok", "results": 'Brak danych: nazwy blockchainu, id bloku lub id transakcji.'
-        }), 404
+        return jsonify({"message": 'Brak danych: nazwy blockchainu, id bloku lub id transakcji.'}), 404
 
     blockchain = current_app.blockchains.get(blockchain_name)  # type: ignore
     if blockchain is None:
-        return jsonify({
-            "status": "ok", "results": f'Nie znaleziono Blockchainu {blockchain_name}.'
-        }), 404
+        return jsonify({"message": f'Nie znaleziono Blockchainu {blockchain_name}.'}), 404
 
     # pobierz dowód Merkle dla transakcji
     proof_data = blockchain.get_transaction_proof(block_index=block_index, tx_id=tx_id)
     if not proof_data:
-        return jsonify({
-            "status": "ok", "results": f'Nie znaleziono transakcji {tx_id} w bloku {block_index}.'
-        }), 404
+        return jsonify({"message": f'Nie znaleziono transakcji {tx_id} w bloku {block_index}.'}), 404
 
     # weryfikacja dowodu
     result = blockchain.verify_merkle_proof(
@@ -341,11 +335,9 @@ def check_merkle_tree():
     )
 
     if result:
-        return jsonify({
-            "status": "ok", "results": f'Transakcja {tx_id} jest poprawna w bloku {block_index}.'
-        }), 200
+        return jsonify({"message": f'Transakcja {tx_id} jest poprawna w bloku {block_index}.'}), 200
     else:
         return jsonify({
-            "status": "ok", "results": f'Drzewo Merkla NIE jest prawidłowe dla transakcji {tx_id} w bloku {block_index}.'
+            "message": f'Drzewo Merkla NIE jest prawidłowe dla transakcji {tx_id} w bloku {block_index}.'
         }), 400
 

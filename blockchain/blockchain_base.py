@@ -143,18 +143,18 @@ class BlockchainBase(ABC):
                     # sprawdź hash poprzedniego bloku
                     previous_hash = self.hm_hash(previous_block)
                     if current_block['previous_hash'] != previous_hash:
-                        return False, f"Nieprawidłowy poprzedni hash w bloku {current_block['index']}"
+                        return False, f"Nieprawidłowy poprzedni hash w bloku {current_block['index']}."
 
                     # sprawdź proof-of-work
                     if not self.hm_valid_proof(previous_block['proof'], current_block['proof'], previous_hash):
-                        return False, f"Nieprawidłowy dowód w bloku {current_block['index']}"
+                        return False, f"Nieprawidłowy dowód w bloku {current_block['index']}."
 
                 last_block = current_block
                 highest_index = current_block['index']  # aktualizuj
 
             offset += batch_size
 
-        return True, f"Blockchain jest poprawny. {highest_index} bloków"
+        return True, f"Blockchain jest poprawny. {highest_index} bloków."
 
     @staticmethod
     def hm_hash(data):
