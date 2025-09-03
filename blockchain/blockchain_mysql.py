@@ -123,7 +123,7 @@ class BlockchainMYSQL(BlockchainBase):
 
         return chain
 
-    def get_transaction_proof(self, block_index: int, tx_id: int):
+    def get_transaction_proof(self, block_index: int, tx_id):
         block = BlockchainBlockMySQL.query.filter_by(index=block_index).first()
         if not block:
             return None
@@ -135,7 +135,7 @@ class BlockchainMYSQL(BlockchainBase):
         ]
 
         # znajdź index transakcji w bloku
-        tx_index = next((i for i, tx in enumerate(transactions) if tx["id"] == tx_id), None)
+        tx_index = next((i for i, tx in enumerate(transactions) if tx["id"] == int(tx_id)), None)
         if tx_index is None:
             return None
 
