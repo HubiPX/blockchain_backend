@@ -1,4 +1,5 @@
 from blockchain.blockchain_base import BlockchainBase
+from collections import defaultdict
 
 
 class BlockchainMongo(BlockchainBase):
@@ -95,7 +96,8 @@ class BlockchainMongo(BlockchainBase):
     def get_chain_batch(self, offset: int, limit: int) -> list[dict]:
         """Pobiera fragment blockchaina z MongoDB w kolejności rosnącej po index."""
 
-        blocks = (
+        # Pobranie bloków
+        blocks = list(
             self.mongo.db.blockchain_blocks
             .find()
             .sort("index", 1)
@@ -103,14 +105,25 @@ class BlockchainMongo(BlockchainBase):
             .limit(limit)
         )
 
+        if not blocks:
+            return []
+
+        # Pobranie wszystkich transakcji dla tych bloków jednym zapytaniem
+        block_ids = [block["_id"] for block in blocks]
+        all_txs = list(
+            self.mongo.db.blockchain_transactions
+            .find({"block_id": {"$in": block_ids}})
+            .sort("_id", 1)
+        )
+
+        # Grupowanie transakcji według block_id
+        tx_by_block = defaultdict(list)
+        for tx in all_txs:
+            tx_by_block[tx["block_id"]].append(tx)
+
+        # Tworzenie listy bloków z transakcjami
         chain = []
         for block in blocks:
-            txs = (
-                self.mongo.db.blockchain_transactions
-                .find({"block_id": block["_id"]})
-                .sort("_id", 1)
-            )
-
             block_dict = {
                 "index": block["index"],
                 "timestamp": block["timestamp"],
@@ -122,13 +135,12 @@ class BlockchainMongo(BlockchainBase):
                         "amount": tx["amount"],
                         "date": tx["date"],
                     }
-                    for tx in txs
+                    for tx in tx_by_block[block["_id"]]
                 ],
                 "proof": block["proof"],
                 "previous_hash": block["previous_hash"],
                 "merkle_root": block["merkle_root"],
             }
-
             chain.append(block_dict)
 
         return chain
