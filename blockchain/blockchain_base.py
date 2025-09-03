@@ -158,8 +158,6 @@ class BlockchainBase(ABC):
 
     @staticmethod
     def hm_hash(data):
-        #if isinstance(data, dict) and list(data.keys())[0] == 'index':
-        #    print(data)
         return hashlib.sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
 
     def create_merkle_root(self, transactions):
