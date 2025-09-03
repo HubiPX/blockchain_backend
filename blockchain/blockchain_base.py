@@ -76,10 +76,10 @@ class BlockchainBase(ABC):
         return block
 
     def _mine_block(self, tx_limit):
-        """Pomocnicza metoda - kopie blok, gdy mempool >= tx_limit"""
+        """Pomocnicza metoda — kopie blok, gdy mempool >= tx_limit"""
         pending_txs = self.get_pending_transactions(tx_limit)
         self.hm_current_transactions = pending_txs
-        #print(self.last_block)
+
         proof = self.hm_proof_of_work(self.last_block['proof'], self.hm_hash(self.last_block))
         block = self._create_block(proof, self.hm_hash(self.last_block))
 
@@ -143,18 +143,18 @@ class BlockchainBase(ABC):
                     # sprawdź hash poprzedniego bloku
                     previous_hash = self.hm_hash(previous_block)
                     if current_block['previous_hash'] != previous_hash:
-                        return False, f"Invalid previous hash at block {current_block['index']}"
+                        return False, f"Nieprawidłowy poprzedni hash w bloku {current_block['index']}"
 
                     # sprawdź proof-of-work
                     if not self.hm_valid_proof(previous_block['proof'], current_block['proof'], previous_hash):
-                        return False, f"Invalid proof at block {current_block['index']}"
+                        return False, f"Nieprawidłowy dowód w bloku {current_block['index']}"
 
                 last_block = current_block
                 highest_index = current_block['index']  # aktualizuj
 
             offset += batch_size
 
-        return True, f"Blockchain is valid. {highest_index} blocks"
+        return True, f"Blockchain jest poprawny. {highest_index} bloków"
 
     @staticmethod
     def hm_hash(data):
