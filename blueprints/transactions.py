@@ -270,7 +270,7 @@ def generate_random_transactions():
 
 
 @transactions.route('/validate', methods=["POST"])
-@Auth.logged_rcon
+@Auth.logged_admin
 def validate_blockchains():
     data = request.get_json()
     blockchain_name = data.get("blockchain_name")
@@ -308,7 +308,7 @@ def validate_blockchains():
 
 
 @transactions.route('/merkle_tree', methods=["POST"])
-@Auth.logged_rcon
+@Auth.logged_admin
 def check_merkle_tree():
     data = request.get_json()
     blockchain_name = data.get("blockchain_name")
