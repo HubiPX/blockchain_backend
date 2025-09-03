@@ -48,7 +48,8 @@ def transfer_score():
     sender.score -= amount
     recipient.score += amount
 
-    now = datetime.utcnow().replace(microsecond=(datetime.utcnow().microsecond // 1000) * 1000)
+    now = datetime.now().replace(microsecond=(datetime.now().microsecond // 1000) * 1000)
+
     tx_data = {
         'sender': sender.username,
         'recipient': recipient.username,

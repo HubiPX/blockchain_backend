@@ -60,7 +60,7 @@ class BlockchainBase(ABC):
 
         block_data = {
             'index': block_index,
-            'timestamp': datetime.utcnow().replace(microsecond=(datetime.utcnow().microsecond // 1000) * 1000),
+            'timestamp': datetime.now().replace(microsecond=(datetime.now().microsecond // 1000) * 1000),
             'transactions': self.hm_current_transactions,
             'proof': hm_proof,
             'previous_hash': hm_previous_hash,
