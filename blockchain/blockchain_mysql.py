@@ -1,5 +1,6 @@
 from database.models import db, BlockchainBlockMySQL, BlockchainTransactionMySQL, MempoolTransactionMySQL
 from blockchain.blockchain_base import BlockchainBase
+from collections import defaultdict
 
 
 class BlockchainMYSQL(BlockchainBase):
@@ -90,20 +91,32 @@ class BlockchainMYSQL(BlockchainBase):
 
     def get_chain_batch(self, offset: int, limit: int) -> list[dict]:
         """Pobiera fragment blockchaina z bazy (paginacja)."""
+        # Pobranie bloków
         blocks = (BlockchainBlockMySQL.query
                   .order_by(BlockchainBlockMySQL.index.asc())
                   .offset(offset)
                   .limit(limit)
                   .all())
 
-        chain = []
-        for block in blocks:
-            txs = (BlockchainTransactionMySQL.query
-                   .filter_by(block_id=block.id)
+        if not blocks:
+            return []
+
+        # Pobranie wszystkich transakcji dla tych bloków naraz
+        block_ids = [block.id for block in blocks]
+        all_txs = (BlockchainTransactionMySQL.query
+                   .filter(BlockchainTransactionMySQL.block_id.in_(block_ids))
                    .order_by(BlockchainTransactionMySQL.id.asc())
                    .all())
 
-            chain.append({
+        # Grupowanie transakcji według block_id
+        tx_by_block = defaultdict(list)
+        for tx in all_txs:
+            tx_by_block[tx.block_id].append(tx)
+
+        # Tworzenie listy bloków z transakcjami
+        chain = []
+        for block in blocks:
+            block_dict = {
                 'index': block.index,
                 'timestamp': block.timestamp,
                 'transactions': [
@@ -114,12 +127,13 @@ class BlockchainMYSQL(BlockchainBase):
                         'amount': tx.amount,
                         'date': tx.date
                     }
-                    for tx in txs
+                    for tx in tx_by_block[block.id]
                 ],
                 'proof': block.proof,
                 'previous_hash': block.previous_hash,
                 'merkle_root': block.merkle_root
-            })
+            }
+            chain.append(block_dict)
 
         return chain
 
