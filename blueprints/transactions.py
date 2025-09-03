@@ -316,16 +316,22 @@ def check_merkle_tree():
     tx_id = data.get("tx_id")
 
     if not blockchain_name or block_index is None or tx_id is None:
-        return 'Brak danych: nazwy blockchainu, id bloku lub id transakcji.', 400
+        return jsonify({
+            "status": "ok", "results": 'Brak danych: nazwy blockchainu, id bloku lub id transakcji.'
+        }), 404
 
     blockchain = current_app.blockchains.get(blockchain_name)  # type: ignore
     if blockchain is None:
-        return f'Nie znaleziono Blockchainu {blockchain_name}', 404
+        return jsonify({
+            "status": "ok", "results": f'Nie znaleziono Blockchainu {blockchain_name}.'
+        }), 404
 
     # pobierz dowód Merkle dla transakcji
     proof_data = blockchain.get_transaction_proof(block_index=block_index, tx_id=tx_id)
     if not proof_data:
-        return f'Nie znaleziono transakcji {tx_id} w bloku {block_index} .', 404
+        return jsonify({
+            "status": "ok", "results": f'Nie znaleziono transakcji {tx_id} w bloku {block_index}.'
+        }), 404
 
     # weryfikacja dowodu
     result = blockchain.verify_merkle_proof(
@@ -335,6 +341,11 @@ def check_merkle_tree():
     )
 
     if result:
-        return f'Transakcja {tx_id} jest poprawna w bloku {block_index}', 200
+        return jsonify({
+            "status": "ok", "results": f'Transakcja {tx_id} jest poprawna w bloku {block_index}.'
+        }), 200
     else:
-        return f'Drzewo Merkla NIE jest prawidłowe dla transakcji {tx_id} w bloku {block_index}', 400
+        return jsonify({
+            "status": "ok", "results": f'Drzewo Merkla NIE jest prawidłowe dla transakcji {tx_id} w bloku {block_index}.'
+        }), 400
+
