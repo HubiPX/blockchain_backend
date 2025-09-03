@@ -151,7 +151,7 @@ def generate_random_transactions():
         user_scores[recipient_name] += amount
 
         # bieżący czas, przycięty do ms
-        now = datetime.utcnow().replace(microsecond=(datetime.utcnow().microsecond // 1000) * 1000)
+        now = datetime.now().replace(microsecond=(datetime.now().microsecond // 1000) * 1000)
 
         # jeżeli poprzednia transakcja miała >= now, to wymuszamy +1 ms
         if last_time and now <= last_time:
