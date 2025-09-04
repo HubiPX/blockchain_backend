@@ -108,7 +108,6 @@ def transfer_score():
 @Auth.logged_rcon
 def generate_random_transactions():
     from main import mongo
-    from flask import current_app
 
     data = request.get_json()
     count = data.get("count")
