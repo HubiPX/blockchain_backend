@@ -5,6 +5,9 @@ from collections import defaultdict
 class BlockchainMongo(BlockchainBase):
     def __init__(self, mongo):
         self.mongo = mongo
+        self.blocks = self.mongo.db.blockchain_blocks
+        self.transactions = self.mongo.db.blockchain_transactions
+        self.mempool = self.mongo.db.mempool_transactions
         super().__init__()
 
     def get_last_block_from_db(self):

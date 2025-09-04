@@ -28,6 +28,7 @@ socketio = SocketIO(app, cors_allowed_origins="http://127.0.0.1:5500")
 db.app = app
 db.init_app(app)
 mongo = PyMongo(app)
+app.mongo = mongo
 
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_PASSWORD = "admin"

@@ -14,7 +14,6 @@ transactions = Blueprint('transactions', __name__)
 @transactions.route('/transfer-score', methods=['POST'])
 @Auth.logged_user
 def transfer_score():
-    from main import mongo
     data = request.get_json()
 
     recipient_username = data.get('recipient')
@@ -59,7 +58,7 @@ def transfer_score():
 
     tx_mysql = TransactionsMySQL(**tx_data)
     tx_sqlite = TransactionsSQLite(**tx_data)
-    transactions_mongo = TransactionsMongo(mongo)
+    transactions_mongo = TransactionsMongo(current_app.mongo)  # type: ignore
 
     try:
         # Zapis do MySQL
@@ -107,8 +106,6 @@ def transfer_score():
 @transactions.route('/generate-random-transactions', methods=['POST'])
 @Auth.logged_rcon
 def generate_random_transactions():
-    from main import mongo
-
     data = request.get_json()
     count = data.get("count")
 
@@ -207,7 +204,7 @@ def generate_random_transactions():
         start_mongo = time.perf_counter()
         for i in range(0, generated, batch_size):
             batch = copy_transactions_data_mongo[i:i + batch_size]
-            mongo.db.transactions.insert_many(batch)
+            current_app.mongo.db.transactions.insert_many(batch)  # type: ignore
         end_mongo = time.perf_counter()
         mongo_time = end_mongo - start_mongo
 
