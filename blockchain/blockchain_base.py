@@ -88,7 +88,7 @@ class BlockchainBase(ABC):
 
         self.clear_pending_transactions(pending_txs)
 
-    def hm_add_transaction_to_mempool(self, transactions, tx_limit=30):
+    def hm_add_transaction_to_mempool(self, transactions, tx_limit):
         if not isinstance(transactions, list):
             transactions = [transactions]
 
