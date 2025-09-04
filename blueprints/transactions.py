@@ -3,7 +3,7 @@ import time
 from flask import Blueprint, session, request, current_app, jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import scoped_session, sessionmaker
-from database.models import db
+from database.models import db, MempoolTransactionMySQL
 from database.models import Users, TransactionsMySQL, TransactionsSQLite, TransactionsMongo
 from blueprints.auth import Auth
 from datetime import datetime, timedelta
@@ -136,14 +136,16 @@ def transfer_score():
             "date": now
         }]
 
+        mempool_size = 30
+
         # Zapis do MySQL
-        current_app.blockchains["mysql"].hm_add_transaction_to_mempool(tx)  # type: ignore
+        current_app.blockchains["mysql"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
 
         # Zapis do SQLite
-        current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(tx)  # type: ignore
+        current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
 
         # Zapis do Mongo
-        current_app.blockchains["mongo"].hm_add_transaction_to_mempool(tx)  # type: ignore
+        current_app.blockchains["mongo"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
 
         return jsonify({"message": f"Pomyślnie przesłano {amount} punktów do {recipient_username}."}), 200
 
