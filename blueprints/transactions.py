@@ -161,6 +161,13 @@ def transfer_score():
 def generate_random_transactions():
     data = request.get_json()
     count = data.get("count")
+    tx_limit = data.get("tx_limit", 30)
+    mempool = MempoolTransactionMySQL.query.count()
+
+    if mempool > tx_limit:
+        return jsonify({
+            "message": f"Aktualnie w mempoolu znajduje się {mempool} transakcji, co przekracza wprowadzony limit."
+        }), 400
 
     if not isinstance(count, int) or count <= 0:
         return jsonify({"message": "Nieprawidłowa liczba transakcji."}), 400
@@ -229,7 +236,7 @@ def generate_random_transactions():
         start_mysql_blockchain = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = transactions_data[i:i + batch_size]
-            current_app.blockchains["mysql"].hm_add_transaction_to_mempool(batch)  # type: ignore
+            current_app.blockchains["mysql"].hm_add_transaction_to_mempool(batch, tx_limit)  # type: ignore
         end_mysql_blockchain = time.perf_counter()
         mysql_blockchain_time = end_mysql_blockchain - start_mysql_blockchain
 
@@ -237,7 +244,7 @@ def generate_random_transactions():
         start_sqlite_blockchain = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = copy_transactions_data_sqlite[i:i + batch_size]
-            current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(batch)  # type: ignore
+            current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(batch, tx_limit)  # type: ignore
         end_sqlite_blockchain = time.perf_counter()
         sqlite_blockchain_time = end_sqlite_blockchain - start_sqlite_blockchain
 
@@ -245,7 +252,7 @@ def generate_random_transactions():
         start_mongo_blockchain = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = copy_transactions_data_mongo[i:i + batch_size]
-            current_app.blockchains["mongo"].hm_add_transaction_to_mempool(batch)  # type: ignore
+            current_app.blockchains["mongo"].hm_add_transaction_to_mempool(batch, tx_limit)  # type: ignore
         end_mongo_blockchain = time.perf_counter()
         mongo_blockchain_time = end_mongo_blockchain - start_mongo_blockchain
 
@@ -256,8 +263,10 @@ def generate_random_transactions():
             user.score = user_scores[user.username]
         db.session.commit()
 
+        mempool = MempoolTransactionMySQL.query.count()
+
         return jsonify({
-            "message": f"Wygenerowano i dodano {count} losowych transakcji.",
+            "message": f"Wygenerowano i dodano {count} losowych transakcji. \n Mempool: {mempool}/{tx_limit}",
             "db_times": {
                 "MySQL": f"{mysql_time:.3f} s",
                 "SQLite": f"{sqlite_time:.3f} s",
