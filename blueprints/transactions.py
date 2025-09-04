@@ -166,7 +166,7 @@ def generate_random_transactions():
 
     if mempool > tx_limit:
         return jsonify({
-            "message": f"Aktualnie w mempoolu znajduje się {mempool} transakcji, co przekracza wprowadzony limit."
+            "message": f"Limit ({tx_limit}) musi być większy niż aktualna liczba transakcji w mempoolu ({mempool})."
         }), 400
 
     if not isinstance(count, int) or count <= 0:
