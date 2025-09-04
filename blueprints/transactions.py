@@ -11,6 +11,57 @@ from datetime import datetime, timedelta
 transactions = Blueprint('transactions', __name__)
 
 
+def generate_transactions(count, user_scores, all_users):
+    """
+    Generuje listę transakcji między użytkownikami.
+
+    :param count: liczba transakcji do wygenerowania
+    :param user_scores: słownik {username: score}
+    :param all_users: lista obiektów użytkowników (muszą mieć .username)
+    :return: lista transakcji w formacie {'sender', 'recipient', 'amount', 'date'}
+    """
+    transactions_data = []
+    generated = 0
+    attempts = 0
+    max_attempts = count * 10
+    last_time = None
+
+    while generated < count and attempts < max_attempts:
+        attempts += 1
+        sender, recipient = random.sample(all_users, 2)
+        sender_name = sender.username
+        recipient_name = recipient.username
+
+        if user_scores[sender_name] <= 0:
+            continue
+
+        amount = random.randint(1, min(500, user_scores[sender_name]))
+
+        if user_scores[sender_name] - amount < 0:
+            continue
+
+        user_scores[sender_name] -= amount
+        user_scores[recipient_name] += amount
+
+        now = datetime.now().replace(microsecond=(datetime.now().microsecond // 1000) * 1000)
+
+        if last_time and now <= last_time:
+            now = last_time + timedelta(milliseconds=1)
+
+        last_time = now
+
+        tx = {
+            'sender': sender_name,
+            'recipient': recipient_name,
+            'amount': amount,
+            'date': now
+        }
+        transactions_data.append(tx)
+        generated += 1
+
+    return transactions_data
+
+
 @transactions.route('/transfer-score', methods=['POST'])
 @Auth.logged_user
 def transfer_score():
@@ -122,47 +173,7 @@ def generate_random_transactions():
 
     user_scores = {user.username: user.score for user in all_users}
 
-    transactions_data = []
-    generated = 0
-    attempts = 0
-    max_attempts = count * 10
-
-    last_time = None  # zapamiętujemy ostatni timestamp
-
-    while generated < count and attempts < max_attempts:
-        attempts += 1
-        sender, recipient = random.sample(all_users, 2)
-        sender_name = sender.username
-        recipient_name = recipient.username
-
-        if user_scores[sender_name] <= 0:
-            continue
-
-        amount = random.randint(1, min(500, user_scores[sender_name]))
-
-        if user_scores[sender_name] - amount < 0:
-            continue
-
-        user_scores[sender_name] -= amount
-        user_scores[recipient_name] += amount
-
-        # bieżący czas, przycięty do ms
-        now = datetime.now().replace(microsecond=(datetime.now().microsecond // 1000) * 1000)
-
-        # jeżeli poprzednia transakcja miała >= now, to wymuszamy +1 ms
-        if last_time and now <= last_time:
-            now = last_time + timedelta(milliseconds=1)
-
-        last_time = now
-
-        tx = {
-            'sender': sender_name,
-            'recipient': recipient_name,
-            'amount': amount,
-            'date': now
-        }
-        transactions_data.append(tx)
-        generated += 1
+    transactions_data = generate_transactions(count=count, user_scores=user_scores, all_users=all_users)
 
     copy_transactions_data_sqlite = [dict(tx) for tx in transactions_data]
     copy_transactions_data_mongo = [dict(tx) for tx in transactions_data]
@@ -180,7 +191,7 @@ def generate_random_transactions():
         # ---------------------------
         # MySQL
         start_mysql = time.perf_counter()
-        for i in range(0, generated, batch_size):
+        for i in range(0, count, batch_size):
             batch = transactions_data[i:i + batch_size]
             #batch_objects = [TransactionsMySQL(**tx) for tx in batch]
             #db.session.add_all(batch_objects)
@@ -191,7 +202,7 @@ def generate_random_transactions():
 
         # SQLite
         start_sqlite = time.perf_counter()
-        for i in range(0, generated, batch_size):
+        for i in range(0, count, batch_size):
             batch = copy_transactions_data_sqlite[i:i + batch_size]
             #batch_objects = [TransactionsSQLite(**tx) for tx in batch]
             #sqlite_session.add_all(batch_objects)
@@ -202,7 +213,7 @@ def generate_random_transactions():
 
         # Mongo (history collection)
         start_mongo = time.perf_counter()
-        for i in range(0, generated, batch_size):
+        for i in range(0, count, batch_size):
             batch = copy_transactions_data_mongo[i:i + batch_size]
             current_app.mongo.db.transactions.insert_many(batch)  # type: ignore
         end_mongo = time.perf_counter()
@@ -214,7 +225,7 @@ def generate_random_transactions():
 
         # MySQL blockchain
         start_mysql_blockchain = time.perf_counter()
-        for i in range(0, generated, batch_size):
+        for i in range(0, count, batch_size):
             batch = transactions_data[i:i + batch_size]
             current_app.blockchains["mysql"].hm_add_transaction_to_mempool(batch)  # type: ignore
         end_mysql_blockchain = time.perf_counter()
@@ -222,7 +233,7 @@ def generate_random_transactions():
 
         # SQLite blockchain
         start_sqlite_blockchain = time.perf_counter()
-        for i in range(0, generated, batch_size):
+        for i in range(0, count, batch_size):
             batch = copy_transactions_data_sqlite[i:i + batch_size]
             current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(batch)  # type: ignore
         end_sqlite_blockchain = time.perf_counter()
@@ -230,7 +241,7 @@ def generate_random_transactions():
 
         # Mongo blockchain
         start_mongo_blockchain = time.perf_counter()
-        for i in range(0, generated, batch_size):
+        for i in range(0, count, batch_size):
             batch = copy_transactions_data_mongo[i:i + batch_size]
             current_app.blockchains["mongo"].hm_add_transaction_to_mempool(batch)  # type: ignore
         end_mongo_blockchain = time.perf_counter()
@@ -244,7 +255,7 @@ def generate_random_transactions():
         db.session.commit()
 
         return jsonify({
-            "message": f"Wygenerowano i dodano {generated} losowych transakcji.",
+            "message": f"Wygenerowano i dodano {count} losowych transakcji.",
             "db_times": {
                 "MySQL": f"{mysql_time:.3f} s",
                 "SQLite": f"{sqlite_time:.3f} s",
