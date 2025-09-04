@@ -71,7 +71,8 @@ class BlockchainMongo(BlockchainBase):
             for tx in transactions
         ]
 
-        self.mongo.db.blockchain_transactions.insert_many(db_txs)
+        if db_txs:
+            self.mongo.db.blockchain_transactions.insert_many(db_txs)
 
     def save_transactions_to_mempool(self, transactions):
         if not transactions:
