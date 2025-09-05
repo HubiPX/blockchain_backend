@@ -8,6 +8,7 @@ from blueprints.login import login
 from blueprints.admin import admin
 from blueprints.logout import logout
 from blueprints.users import users
+from blueprints.blockchain import blockchain
 from blueprints.transactions import transactions
 from blueprints.info import info
 from database.models import db, Users
@@ -56,6 +57,7 @@ app.register_blueprint(users, url_prefix='/api/users')
 app.register_blueprint(info, url_prefix='/api/info')
 app.register_blueprint(admin, url_prefix='/api/admin')
 app.register_blueprint(transactions, url_prefix='/api/transactions')
+app.register_blueprint(blockchain, url_prefix='/api/blockchain')
 
 
 if __name__ == "__main__":
