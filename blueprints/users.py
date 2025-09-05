@@ -1,7 +1,7 @@
 from flask import Blueprint, session, request, jsonify
 from sqlalchemy import desc
 from database.models import db
-from database.models import Users, TransactionsMySQL
+from database.models import Users
 from database.hash import Hash
 from blueprints.auth import Auth
 
@@ -132,64 +132,3 @@ def _change_password_():
     user.password = pwd_hash
     db.session.commit()
     return jsonify({"message": ""}), 200
-
-
-@users.route('/last_3_transactions', methods=['GET'])
-def get_last_3_transactions():
-    recent_transactions = TransactionsMySQL.query.order_by(
-        desc(TransactionsMySQL.id)
-    ).limit(3).all()
-
-    return jsonify([{
-        "sender": t.sender,
-        "recipient": t.recipient,
-        "amount": t.amount
-    } for t in recent_transactions])
-
-
-@users.route('/transactions', methods=['POST'])
-@Auth.logged_mod
-def transactions():
-    data = request.get_json()
-    page = data.get("page", 1)
-    per_page = 50
-
-    total_transactions = TransactionsMySQL.query.count()
-    max_page = (total_transactions + per_page - 1) // per_page  # zaokrąglenie w górę
-
-    user = Users.query.filter_by(id=session.get("user_id")).first()
-    user_score = user.score if user else None
-    user_id = user.id if user else None
-
-    if page < 1:
-        return jsonify({"message": "Numer strony musi być większy lub równy 1."}), 400
-    elif page > max_page and total_transactions > 0:
-        return jsonify({"message": f"Strona {page} nie istnieje. Maksymalna strona to {max_page}."}), 400
-    elif total_transactions == 0:
-        return jsonify({
-            "page": page,
-            "max_page": 0,
-            "transactions": []
-        }), 200
-
-    offset = (page - 1) * per_page
-
-    transactions = TransactionsMySQL.query.order_by(
-        desc(TransactionsMySQL.id)
-    ).offset(offset).limit(per_page).all()
-
-    return jsonify({
-        "score": user_score,
-        "user_id": user_id,
-        "page": page,
-        "max_page": max_page,
-        "transactions": [{
-            "sender": x.sender,
-            "recipient": x.recipient,
-            "amount": x.amount,
-            "date": x.date
-        } for x in transactions]
-    }), 200
-
-
-
