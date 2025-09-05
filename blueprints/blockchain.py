@@ -57,6 +57,7 @@ def transactions():
         "page": page,
         "max_page": max_page,
         "transactions": [{
+            "id": x.id,
             "sender": x.sender,
             "recipient": x.recipient,
             "amount": x.amount,
