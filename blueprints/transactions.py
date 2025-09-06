@@ -7,6 +7,7 @@ from database.models import db, MempoolTransactionMySQL
 from database.models import Users, TransactionsMySQL, TransactionsSQLite, TransactionsMongo
 from blueprints.auth import Auth
 from datetime import datetime, timedelta
+import os
 
 transactions = Blueprint('transactions', __name__)
 
@@ -181,46 +182,97 @@ def generate_random_transactions():
         return jsonify({"message": "Za mało użytkowników do wykonania transakcji."}), 400
 
     user_scores = {user.username: user.score for user in all_users}
-
     transactions_data = generate_transactions(count=count, user_scores=user_scores, all_users=all_users)
 
     copy_transactions_data_sqlite = [dict(tx) for tx in transactions_data]
     copy_transactions_data_mongo = [dict(tx) for tx in transactions_data]
+
+    # ===========================
+    # Pomocnicze funkcje do rozmiaru
+    # ===========================
+
+    def get_mysql_size_kb(num_rows, table_names):
+        """
+        Zwraca szacowany rozmiar dodanych wierszy w KB dla jednej lub wielu tabel.
+
+        :param num_rows: liczba dodanych wierszy dla każdej tabeli
+        :param table_names: lista nazw tabel lub pojedyncza nazwa tabeli (str)
+        :return: szacowany rozmiar w KB
+        """
+        # Przybliżone rozmiary w B na wiersz
+        table_sizes = {
+            "transactions": 76,
+            "blockchain_blocks": 168,
+            "blockchain_transactions": 80,
+            "mempool_transactions": 80,
+        }
+
+        # Jeśli przekazano pojedynczą tabelę jako string
+        if isinstance(table_names, str):
+            table_names = [table_names]
+
+        total_kb = 0.0
+        for table in table_names:
+            size_per_row = table_sizes.get(table, 100)
+            total_kb += (size_per_row * num_rows) / 1024.0
+
+        return total_kb
+
+    def get_sqlite_size_kb(path):
+        return os.path.getsize(path)/1024.0 if os.path.exists(path) else 0.0
+
+    def get_mongo_size_kb(db, collections):
+        total = 0.0
+        for coll in collections:
+            try:
+                stats = db.command("collstats", coll)
+                total += stats.get("size", 0)/1024.0
+            except Exception:
+                pass
+        return total
+
+    mysql_tx_table = ["transactions"]
+    mysql_bc_tables = ["blockchain_blocks", "blockchain_transactions", "mempool_transactions"]
+    sqlite_db_path = "database/database.db"
+    mongo_tx_collection = ["transactions"]
+    mongo_bc_collections = ["blockchain_blocks", "blockchain_transactions", "mempool_transactions"]
 
     # przygotowanie sqlite session
     sqlite_engine = db.get_engine(bind='sqlite_db')
     sqlite_session_factory = sessionmaker(bind=sqlite_engine)
     sqlite_session = scoped_session(sqlite_session_factory)
 
-    batch_size = 2000
-
     try:
-        # ---------------------------
+        # ===========================
+        # Pomiary przed dodaniem danych
+        # ===========================
+        sqlite_tx_size_before = get_sqlite_size_kb(sqlite_db_path)
+        mongo_tx_size_before = get_mongo_size_kb(current_app.mongo.db, mongo_tx_collection)  # type: ignore
+
+        # ===========================
         #  zapis do baz danych (MySQL, SQLite, Mongo)
-        # ---------------------------
-        # MySQL
+        # ===========================
+        batch_size = 2000
+
+        # MySQL transactions
         start_mysql = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = transactions_data[i:i + batch_size]
-            #batch_objects = [TransactionsMySQL(**tx) for tx in batch]
-            #db.session.add_all(batch_objects)
             db.session.bulk_insert_mappings(TransactionsMySQL, batch)
             db.session.commit()
         end_mysql = time.perf_counter()
         mysql_time = end_mysql - start_mysql
 
-        # SQLite
+        # SQLite transactions
         start_sqlite = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = copy_transactions_data_sqlite[i:i + batch_size]
-            #batch_objects = [TransactionsSQLite(**tx) for tx in batch]
-            #sqlite_session.add_all(batch_objects)
             sqlite_session.bulk_insert_mappings(TransactionsSQLite, batch)  # type: ignore
             sqlite_session.commit()
         end_sqlite = time.perf_counter()
         sqlite_time = end_sqlite - start_sqlite
 
-        # Mongo (history collection)
+        # Mongo transactions
         start_mongo = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = copy_transactions_data_mongo[i:i + batch_size]
@@ -228,11 +280,20 @@ def generate_random_transactions():
         end_mongo = time.perf_counter()
         mongo_time = end_mongo - start_mongo
 
-        # ---------------------------
-        #  MEMPOOL: dodajemy do blockchainów (batched) + pomiar czasu
-        # ---------------------------
+        # ===========================
+        # Pomiary po dodaniu transactions
+        # ===========================
+        mysql_tx_size_after = get_mysql_size_kb(count, mysql_tx_table)
+        sqlite_tx_size_after = get_sqlite_size_kb(sqlite_db_path)
+        mongo_tx_size_after = get_mongo_size_kb(current_app.mongo.db, mongo_tx_collection)  # type: ignore
 
+        # ===========================
+        #  MEMPOOL: dodajemy do blockchainów (batched)
+        # ===========================
         # MySQL blockchain
+        sqlite_bc_size_after = get_sqlite_size_kb(sqlite_db_path)
+        mongo_bc_size_after = get_mongo_size_kb(current_app.mongo.db, mongo_bc_collections)  # type: ignore
+
         start_mysql_blockchain = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = transactions_data[i:i + batch_size]
@@ -256,9 +317,17 @@ def generate_random_transactions():
         end_mongo_blockchain = time.perf_counter()
         mongo_blockchain_time = end_mongo_blockchain - start_mongo_blockchain
 
-        # ---------------------------
-        #  Aktualizacja score userów w DB (historyczny Users table)
-        # ---------------------------
+
+        # ===========================
+        # Pomiary po dodaniu blockchain
+        # ===========================
+        mysql_bc_size_final = get_mysql_size_kb(count, mysql_bc_tables)
+        sqlite_bc_size_final = get_sqlite_size_kb(sqlite_db_path)
+        mongo_bc_size_final = get_mongo_size_kb(current_app.mongo.db, mongo_bc_collections)  # type: ignore
+
+        # ===========================
+        #  Aktualizacja score userów
+        # ===========================
         for user in all_users:
             user.score = user_scores[user.username]
         db.session.commit()
@@ -276,6 +345,16 @@ def generate_random_transactions():
                 "MySQL Blockchain": f"{mysql_blockchain_time:.3f} s",
                 "SQLite Blockchain": f"{sqlite_blockchain_time:.3f} s",
                 "MongoDB Blockchain": f"{mongo_blockchain_time:.3f} s",
+            },
+            "db_sizes": {
+                "MySQL": f"{mysql_tx_size_after:.2f} KB",
+                "SQLite": f"{sqlite_tx_size_after - sqlite_tx_size_before:.2f} KB",
+                "MongoDB": f"{mongo_tx_size_after - mongo_tx_size_before:.2f} KB"
+            },
+            "blockchain_sizes": {
+                "MySQL": f"{mysql_bc_size_final:.2f} KB",
+                "SQLite": f"{sqlite_bc_size_final - sqlite_bc_size_after:.2f} KB",
+                "MongoDB": f"{mongo_bc_size_final - mongo_bc_size_after:.2f} KB"
             }
         }), 200
 
