@@ -162,6 +162,7 @@ def generate_random_transactions():
     data = request.get_json()
     count = data.get("count")
     tx_limit = data.get("tx_limit", 30)
+    batch_size = data.get("batch_size", 1000)
     mempool = MempoolTransactionMySQL.query.count()
 
     if mempool > tx_limit:
@@ -192,8 +193,6 @@ def generate_random_transactions():
     sqlite_session_factory = sessionmaker(bind=sqlite_engine)
     sqlite_session = scoped_session(sqlite_session_factory)
 
-    batch_size = 2000
-
     try:
         # ---------------------------
         #  zapis do baz danych (MySQL, SQLite, Mongo)
@@ -202,8 +201,6 @@ def generate_random_transactions():
         start_mysql = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = transactions_data[i:i + batch_size]
-            #batch_objects = [TransactionsMySQL(**tx) for tx in batch]
-            #db.session.add_all(batch_objects)
             db.session.bulk_insert_mappings(TransactionsMySQL, batch)
             db.session.commit()
         end_mysql = time.perf_counter()
@@ -213,8 +210,6 @@ def generate_random_transactions():
         start_sqlite = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = copy_transactions_data_sqlite[i:i + batch_size]
-            #batch_objects = [TransactionsSQLite(**tx) for tx in batch]
-            #sqlite_session.add_all(batch_objects)
             sqlite_session.bulk_insert_mappings(TransactionsSQLite, batch)  # type: ignore
             sqlite_session.commit()
         end_sqlite = time.perf_counter()
