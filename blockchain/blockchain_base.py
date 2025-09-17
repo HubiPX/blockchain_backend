@@ -2,6 +2,7 @@ import hashlib
 import json
 from abc import ABC, abstractmethod
 from datetime import datetime
+import time
 
 
 class BlockchainBase(ABC):
@@ -121,7 +122,8 @@ class BlockchainBase(ABC):
                 batch = transactions[(x * tx_limit + space_left):(x + 1) * tx_limit + space_left]
                 self.save_transactions_to_mempool(batch)
 
-    def validate_chain(self, batch_size: int = 50):
+    def validate_chain(self, batch_size: int = 1000):
+        start_time = time.perf_counter()
         last_block = None
         offset = 0
         highest_index = 0  # zapamiętujemy największy index
@@ -154,7 +156,9 @@ class BlockchainBase(ABC):
 
             offset += batch_size
 
-        return True, f"Blockchain jest poprawny. {highest_index} bloków."
+        end_time = time.perf_counter() - start_time
+
+        return True, f"Blockchain jest poprawny. {highest_index} bloków. {round(end_time, 3)}s"
 
     @staticmethod
     def hm_hash(data):
