@@ -293,6 +293,7 @@ def generate_random_transactions():
 def validate_blockchains():
     data = request.get_json()
     blockchain_name = data.get("blockchain_name")
+    batch_size = data.get("batch_size", 1000)
 
     results = {}
     all_valid = True
@@ -303,7 +304,7 @@ def validate_blockchains():
         if blockchain is None:
             return jsonify({"message": f"Blockchain '{blockchain_name}' not found"}), 404
 
-        is_valid, message = blockchain.validate_chain()
+        is_valid, message = blockchain.validate_chain(batch_size=batch_size)
         results[blockchain_name] = {
             "valid": is_valid,
             "message": blockchain_name.upper() + " " + message
@@ -312,7 +313,7 @@ def validate_blockchains():
     else:
         # Sprawdzamy wszystkie blockchainy (dotychczasowa logika)
         for name, blockchain in current_app.blockchains.items():  # type: ignore
-            is_valid, message = blockchain.validate_chain()
+            is_valid, message = blockchain.validate_chain(batch_size=batch_size)
             results[name] = {
                 "valid": is_valid,
                 "message": name.upper() + " " + message
