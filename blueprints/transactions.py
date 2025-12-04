@@ -261,7 +261,8 @@ def generate_random_transactions():
         mempool = MempoolTransactionMySQL.query.count()
 
         return jsonify({
-            "message": f"Wygenerowano i dodano {count} losowych transakcji. \n Mempool: {mempool}/{tx_limit}",
+            "message": f"Wygenerowano i dodano {count} losowych transakcji. \n "
+                       f"Mempool: {mempool}/{tx_limit}. \n Batch size: {batch_size}. ",
             "db_times": {
                 "MySQL": f"{mysql_time:.3f} s",
                 "SQLite": f"{sqlite_time:.3f} s",
