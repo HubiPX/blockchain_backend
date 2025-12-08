@@ -3,6 +3,7 @@ from database.models import Users
 from database.models import db
 from database.hash import Hash
 import datetime
+from blockchain.system_score import add_score_system
 
 login = Blueprint('login', __name__)
 
@@ -36,10 +37,10 @@ def _login_():
 
     if user.last_login is None:
         user.last_login = today
-        user.score += 10
+        add_score_system(100, user)
     elif today.date() != user.last_login.date():
-        user.score += 10
         user.last_login = today
+        add_score_system(100, user)
     elif today.date() == user.last_login.date():
         user.last_login = today
 
