@@ -324,8 +324,10 @@ def check_merkle_tree():
     block_index = data.get("block_index")
     tx_id = data.get("tx_id")
 
-    if not blockchain_name or block_index is None or tx_id is None:
-        return jsonify({"message": 'Brak danych: nazwy blockchainu, id bloku lub id transakcji.'}), 404
+    if blockchain_name not in ["mysql", "mongo", "sqlite"]:
+        return jsonify({"message": f"Blockchain '{blockchain_name}' nie istnieje."}), 404
+    elif block_index is None or tx_id is None:
+        return jsonify({"message": 'Brak danych: id bloku lub id transakcji.'}), 404
 
     blockchain = current_app.blockchains.get(blockchain_name)  # type: ignore
     if blockchain is None:
