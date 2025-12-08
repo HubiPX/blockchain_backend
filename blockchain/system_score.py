@@ -1,0 +1,74 @@
+from flask import current_app
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import scoped_session, sessionmaker
+from database.models import db
+from database.models import TransactionsMySQL, TransactionsSQLite, TransactionsMongo
+from datetime import datetime
+
+
+def add_score_system(score: int, user):
+    if score is None:
+        raise ValueError("Brak danych: ilości punktów.")
+
+    try:
+        score = int(score)
+    except ValueError:
+        raise ValueError("Ilość punktów musi być liczbą całkowitą.")
+
+    # Dodanie punktów
+    user.score += score
+
+    now = datetime.now().replace(microsecond=(datetime.now().microsecond // 1000) * 1000)
+
+    tx_data = {
+        'sender': "SYSTEM",
+        'recipient': user.username,
+        'amount': score,
+        'date': now
+    }
+
+    tx_mysql = TransactionsMySQL(**tx_data)
+    tx_sqlite = TransactionsSQLite(**tx_data)
+    transactions_mongo = TransactionsMongo(current_app.mongo)  # type: ignore
+
+    try:
+        # MySQL
+        db.session.add(tx_mysql)
+        db.session.commit()
+
+        # SQLite
+        sqlite_session = scoped_session(sessionmaker(bind=db.get_engine(bind='sqlite_db')))
+        sqlite_session.add(tx_sqlite)
+        sqlite_session.commit()
+        sqlite_session.remove()
+
+        # MongoDB
+        transactions_mongo.insert_transaction(
+            sender=tx_data['sender'],
+            recipient=tx_data['recipient'],
+            amount=tx_data['amount'],
+            date=tx_data['date']
+        )
+
+        # Blockchain
+        tx = [{
+            "sender": "SYSTEM",
+            "recipient": user.username,
+            "amount": score,
+            "date": now
+        }]
+
+        mempool_size = 30
+
+        current_app.blockchains["mysql"].hm_add_transaction_to_mempool(tx, mempool_size)   # type: ignore
+        current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
+        current_app.blockchains["mongo"].hm_add_transaction_to_mempool(tx, mempool_size)   # type: ignore
+
+        return True  # sukces
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        raise RuntimeError(f"Błąd przy zapisie transakcji: {str(e)}")
+
+    except Exception as e:
+        raise RuntimeError(f"Nieoczekiwany błąd: {str(e)}")
