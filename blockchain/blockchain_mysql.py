@@ -159,3 +159,32 @@ class BlockchainMYSQL(BlockchainBase):
             "proof": proof,
             "merkle_root": block.merkle_root
         }
+
+    @staticmethod
+    def get_user_score(username: str):
+        """
+        Zwraca oczekiwaną ilość punktów użytkownika `username`
+        na podstawie wszystkich transakcji w zatwierdzonych blokach i mempoolu.
+        """
+        expected_score = 0
+
+        # 1. Transakcje z zatwierdzonych bloków
+        blocks = BlockchainBlockMySQL.query.order_by(BlockchainBlockMySQL.id.asc()).all()
+        for block in blocks:
+            txs = BlockchainTransactionMySQL.query.filter_by(block_id=block.id)\
+                .order_by(BlockchainTransactionMySQL.id.asc()).all()
+            for tx in txs:
+                if tx.recipient == username:
+                    expected_score += tx.amount
+                elif tx.sender == username:
+                    expected_score -= tx.amount
+
+        # 2. Transakcje z mempoola
+        mempool_txs = MempoolTransactionMySQL.query.order_by(MempoolTransactionMySQL.id.asc()).all()
+        for tx in mempool_txs:
+            if tx.recipient == username:
+                expected_score += tx.amount
+            elif tx.sender == username:
+                expected_score -= tx.amount
+
+        return expected_score

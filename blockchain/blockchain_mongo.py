@@ -181,3 +181,38 @@ class BlockchainMongo(BlockchainBase):
             "proof": proof,
             "merkle_root": block["merkle_root"]
         }
+
+    def get_user_score(self, username: str):
+        """
+        Szybsze liczenie punktów użytkownika w MongoDB za pomocą agregacji.
+        """
+
+        # 1. Transakcje zatwierdzone
+        pipeline_confirmed = [
+            {"$match": {"$or": [{"sender": username}, {"recipient": username}]}},
+            {"$group": {
+                "_id": None,
+                "sent": {"$sum": {"$cond": [{"$eq": ["$sender", username]}, "$amount", 0]}},
+                "received": {"$sum": {"$cond": [{"$eq": ["$recipient", username]}, "$amount", 0]}}
+            }}
+        ]
+        result = list(self.mongo.db.blockchain_transactions.aggregate(pipeline_confirmed))
+        confirmed_score = 0
+        if result:
+            confirmed_score = result[0]["received"] - result[0]["sent"]
+
+        # 2. Transakcje w mempoolu
+        pipeline_mempool = [
+            {"$match": {"$or": [{"sender": username}, {"recipient": username}]}},
+            {"$group": {
+                "_id": None,
+                "sent": {"$sum": {"$cond": [{"$eq": ["$sender", username]}, "$amount", 0]}},
+                "received": {"$sum": {"$cond": [{"$eq": ["$recipient", username]}, "$amount", 0]}}
+            }}
+        ]
+        result_mempool = list(self.mongo.db.mempool_transactions.aggregate(pipeline_mempool))
+        mempool_score = 0
+        if result_mempool:
+            mempool_score = result_mempool[0]["received"] - result_mempool[0]["sent"]
+
+        return confirmed_score + mempool_score
