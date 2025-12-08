@@ -352,3 +352,38 @@ def check_merkle_tree():
             "message": f'Drzewo Merkla NIE jest prawidłowe dla transakcji {tx_id} w bloku {block_index}.'
         }), 400
 
+
+@transactions.route('/check_user_score', methods=["POST"])
+@Auth.logged_admin
+def check_user_score():
+    data = request.get_json()
+    username = data.get("username")
+    blockchain_name = data.get("blockchain_name")
+
+    if not username or not blockchain_name:
+        return jsonify({"message": "Brak danych: username lub blockchain_name."}), 400
+
+    user = Users.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"message": f'Użytkownik {username} nie istnieje.'}), 404
+
+    blockchain = current_app.blockchains.get(blockchain_name)  # type: ignore
+    if blockchain is None:
+        return jsonify({"message": f'Nie znaleziono Blockchainu {blockchain_name}.'}), 404
+
+    expected_score = blockchain.get_user_score(username)
+    actual_score = user.score
+
+    if expected_score == actual_score:
+        return jsonify({"message": f"Score użytkownika {username} jest poprawne - {actual_score}."}), 200
+    else:
+        difference = actual_score - expected_score
+
+        if difference < 0:
+            message = f"Użytkownik {username} ma o {-difference} score za mało."
+        else:
+            message = f"Użytkownik {username} ma o {difference} score za dużo."
+
+        return jsonify({
+            "message": message
+        }), 400
