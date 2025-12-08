@@ -13,11 +13,16 @@ def get_last_3_transactions():
         desc(TransactionsMySQL.id)
     ).limit(3).all()
 
-    return jsonify([{
-        "sender": t.sender,
-        "recipient": t.recipient,
-        "amount": t.amount
-    } for t in recent_transactions])
+    total_transactions = TransactionsMySQL.query.count()
+
+    return jsonify({
+        "total_transactions": total_transactions,
+        "transactions": [{
+            "sender": t.sender,
+            "recipient": t.recipient,
+            "amount": t.amount
+        } for t in recent_transactions]
+    })
 
 
 @blockchain.route('/transactions', methods=['POST'])
@@ -73,14 +78,18 @@ def get_last_3_blocks():
         desc(BlockchainBlockMySQL.id)
     ).limit(3).all()
 
-    # Zwrócenie JSON-a
-    return jsonify([{
-        "block_number": b.index,
-        "timestamp": b.timestamp,
-        "proof": b.proof,
-        "previous_hash": b.previous_hash,
-        "merkle_root": b.merkle_root
-    } for b in recent_blocks])
+    total_blocks = BlockchainBlockMySQL.query.count()
+
+    return jsonify({
+        "total_blocks": total_blocks,
+        "blocks": [{
+            "block_number": b.index,
+            "timestamp": b.timestamp,
+            "proof": b.proof,
+            "previous_hash": b.previous_hash,
+            "merkle_root": b.merkle_root
+        } for b in recent_blocks]
+    })
 
 
 @blockchain.route('/blocks', methods=['POST'])
@@ -140,13 +149,16 @@ def get_last_3_mempool():
         desc(MempoolTransactionMySQL.id)
     ).limit(3).all()
 
-    return jsonify([{
-        "id": tx.id,
-        "sender": tx.sender,
-        "recipient": tx.recipient,
-        "amount": tx.amount,
-        "date": tx.date
-    } for tx in recent_txs])
+    mempool_size = MempoolTransactionMySQL.query.count()
+
+    return jsonify({
+        "mempool_size": mempool_size,
+        "transactions": [{
+            "sender": tx.sender,
+            "recipient": tx.recipient,
+            "amount": tx.amount
+        } for tx in recent_txs]
+    })
 
 
 @blockchain.route('/mempool', methods=['POST'])
