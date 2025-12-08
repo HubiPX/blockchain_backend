@@ -96,12 +96,30 @@ def get_top_3():
         desc(Users.score),
         desc(Users.last_login)
     ).limit(3).all()
-    return jsonify([{
+
+    top_list = [{
         "username": x.username,
         "admin": x.admin,
         "score": x.score,
         "place": top_users.index(x) + 1
-    } for x in top_users])
+    } for x in top_users]
+
+    user_place = None
+    user_id = session.get("user_id")
+    if user_id:
+        user = Users.query.get(user_id)
+        if user:
+            # Liczymy ile użytkowników ma więcej punktów niż zalogowany
+            higher_score_count = Users.query.filter(
+                (Users.score > user.score) |
+                ((Users.score == user.score) & (Users.last_login > user.last_login))
+            ).count()
+            user_place = higher_score_count + 1
+
+    return jsonify({
+        "top_3": top_list,
+        "user_place": user_place
+    })
 
 
 @users.route('/change-password', methods=['post'])
