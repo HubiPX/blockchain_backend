@@ -163,12 +163,6 @@ def generate_random_transactions():
     count = data.get("count")
     tx_limit = data.get("tx_limit", 30)
     batch_size = data.get("batch_size", 1000)
-    mempool = MempoolTransactionMySQL.query.count()
-
-    if mempool > tx_limit:
-        return jsonify({
-            "message": f"Limit ({tx_limit}) musi być większy niż aktualna liczba transakcji w mempoolu ({mempool})."
-        }), 400
 
     if not isinstance(count, int) or count <= 0:
         return jsonify({"message": "Nieprawidłowa liczba transakcji."}), 400
