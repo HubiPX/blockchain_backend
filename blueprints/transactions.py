@@ -290,8 +290,8 @@ def validate_blockchains():
     if blockchain_name:
         # Sprawdzamy tylko wybrany blockchain
         blockchain = current_app.blockchains.get(blockchain_name)  # type: ignore
-        if blockchain is None:
-            return jsonify({"message": f"Blockchain '{blockchain_name}' not found"}), 404
+        if blockchain not in ["mysql", "mongo", "sqlite"]:
+            return jsonify({"message": f"Blockchain '{blockchain_name}' nie istnieje."}), 404
 
         is_valid, message = blockchain.validate_chain(batch_size=batch_size)
         results[blockchain_name] = {
