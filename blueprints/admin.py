@@ -7,7 +7,7 @@ from database.hash import Hash
 from blueprints.auth import Auth
 import re
 import datetime
-
+from blockchain.system_score import add_score_system
 
 admin = Blueprint('admin', __name__)
 
@@ -51,7 +51,8 @@ def _set_score_(user_id):
     if not score >= 0:
         return jsonify({"message": "Wprowadz liczbę większą od 0."}), 400
 
-    user.score = score
+    system_score = score - user.score
+    add_score_system(system_score, user)
 
     db.session.commit()
     return jsonify({"message": f"Ustawiono ilość expa użytkownikowi {user.username} na: {user.score}!"}), 200
