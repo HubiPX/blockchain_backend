@@ -31,7 +31,9 @@ def _create_():
 
     hash_pwd = Hash.hash_password(password)
 
-    if Users.query.filter_by(username=username).first():
+    if username == "SYSTEM":
+        return jsonify({"message": "Nie możesz użyć takiego nicku."}), 406
+    elif Users.query.filter_by(username=username).first():
         return jsonify({"message": "Jest już użytkownik o takim nicku."}), 406
 
     new_user = Users(username=username, password=hash_pwd)
