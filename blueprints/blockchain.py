@@ -73,7 +73,6 @@ def transactions():
 
 @blockchain.route('/last_3_blocks', methods=['GET'])
 def get_last_3_blocks():
-    # Pobranie ostatnich 3 bloków posortowanych malejąco po ID
     recent_blocks = BlockchainBlockMySQL.query.order_by(
         desc(BlockchainBlockMySQL.id)
     ).limit(3).all()
