@@ -4,6 +4,7 @@ from database.models import db
 from database.models import Users
 from database.hash import Hash
 from blueprints.auth import Auth
+from sqlalchemy import func
 
 
 users = Blueprint('users', __name__)
@@ -48,7 +49,7 @@ def _create_():
 def _stats_():
     data = request.args  # dla GET parametry lepiej pobierać z query string
     page = int(data.get("page", 1))
-    per_page = 10
+    per_page = 100
     total_users = Users.query.count()
     max_page = (total_users + per_page - 1) // per_page
 
