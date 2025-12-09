@@ -79,6 +79,12 @@ class BlockchainBase(ABC):
     def _mine_block(self, tx_limit):
         """Pomocnicza metoda — kopie blok, gdy mempool >= tx_limit"""
         pending_txs = self.get_pending_transactions(tx_limit)
+
+        if '_id' in pending_txs[0]:
+            pending_txs.sort(key=lambda tx: tx['_id'])
+        else:
+            pending_txs.sort(key=lambda tx: tx['id'])
+
         self.hm_current_transactions = pending_txs
 
         proof = self.hm_proof_of_work(self.last_block['proof'], self.hm_hash(self.last_block))
