@@ -1,17 +1,26 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects import mysql
 
 db = SQLAlchemy()
 
 
-class Users(db.Model):  # MySQL
+class Users(db.Model):  # MySQL basic
     id = db.Column(db.Integer, primary_key=True, unique=True)
-    username = db.Column(db.String(20), nullable=False, unique=True)
+    username = db.Column(db.String(64), nullable=False, unique=True)
     password = db.Column(db.String(192), nullable=False)
     admin = db.Column(db.Integer, primary_key=False, default=0)
     ban_date = db.Column(db.DateTime, nullable=True)
-    score = db.Column(db.Integer, primary_key=False, default=0)
+    score = db.Column(db.Double(), default=0.00000000)
     last_login = db.Column(db.DateTime, nullable=True)
     vip_date = db.Column(db.DateTime, nullable=True)
+
+
+class PendingBtcTransactions(db.Model):
+    __tablename__ = 'pending_btc_transactions'
+    id = db.Column(db.Integer, primary_key=True)
+    sender = db.Column(db.String(64), nullable=False)
+    recipient = db.Column(db.String(64), nullable=False)
+    amount = db.Column(db.Double(), default=0.00000000)  # BTC
 
 
 #  MYSQL
@@ -19,9 +28,9 @@ class Users(db.Model):  # MySQL
 class TransactionsMySQL(db.Model):
     __tablename__ = 'transactions'
     id = db.Column(db.Integer, primary_key=True)
-    sender = db.Column(db.String(20), nullable=False)
-    recipient = db.Column(db.String(20), nullable=False)
-    amount = db.Column(db.Integer, nullable=False)
+    sender = db.Column(db.String(64), nullable=False)
+    recipient = db.Column(db.String(64), nullable=False)
+    amount = db.Column(db.Double(), default=0.00000000)
     date = db.Column(db.DateTime, nullable=False)
 
 
@@ -29,7 +38,7 @@ class BlockchainBlockMySQL(db.Model):
     __tablename__ = 'blockchain_blocks'
     id = db.Column(db.Integer, primary_key=True)
     index = db.Column(db.Integer)
-    timestamp = db.Column(db.DateTime, nullable=False)
+    timestamp = db.Column(mysql.DATETIME(fsp=6), nullable=False)
     proof = db.Column(db.Integer)
     previous_hash = db.Column(db.String(64))
     merkle_root = db.Column(db.String(64))
@@ -39,19 +48,19 @@ class BlockchainTransactionMySQL(db.Model):
     __tablename__ = 'blockchain_transactions'
     id = db.Column(db.Integer, primary_key=True)
     block_id = db.Column(db.Integer, db.ForeignKey('blockchain_blocks.id'))
-    sender = db.Column(db.String(20), nullable=False)
-    recipient = db.Column(db.String(20), nullable=False)
-    amount = db.Column(db.Integer, nullable=False)
-    date = db.Column(db.DateTime, nullable=False)
+    sender = db.Column(db.String(64), nullable=False)
+    recipient = db.Column(db.String(64), nullable=False)
+    amount = db.Column(db.Double(), default=0.00000000)
+    date = db.Column(mysql.DATETIME(fsp=6), nullable=False)
 
 
 class MempoolTransactionMySQL(db.Model):
     __tablename__ = 'mempool_transactions'
     id = db.Column(db.Integer, primary_key=True)
-    sender = db.Column(db.String(20), nullable=False)
-    recipient = db.Column(db.String(20), nullable=False)
-    amount = db.Column(db.Integer, nullable=False)
-    date = db.Column(db.DateTime, nullable=False)
+    sender = db.Column(db.String(64), nullable=False)
+    recipient = db.Column(db.String(64), nullable=False)
+    amount = db.Column(db.Double(), default=0.00000000)
+    date = db.Column(mysql.DATETIME(fsp=6), nullable=False)
 
 
 #  SQLite
@@ -62,9 +71,9 @@ class TransactionsSQLite(db.Model):
     __tablename__ = 'transactions'
     __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)
-    sender = db.Column(db.String(20), nullable=False)
-    recipient = db.Column(db.String(20), nullable=False)
-    amount = db.Column(db.Integer, nullable=False)
+    sender = db.Column(db.String(64), nullable=False)
+    recipient = db.Column(db.String(64), nullable=False)
+    amount = db.Column(db.Double(), default=0.00000000)
     date = db.Column(db.DateTime, nullable=False)
 
 
@@ -86,9 +95,9 @@ class BlockchainTransactionSQLite(db.Model):
     __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)
     block_id = db.Column(db.Integer, db.ForeignKey('blockchain_blocks.id'))
-    sender = db.Column(db.String(20), nullable=False)
-    recipient = db.Column(db.String(20), nullable=False)
-    amount = db.Column(db.Integer, nullable=False)
+    sender = db.Column(db.String(64), nullable=False)
+    recipient = db.Column(db.String(64), nullable=False)
+    amount = db.Column(db.Double(), default=0.00000000)
     date = db.Column(db.DateTime, nullable=False)
 
 
@@ -97,9 +106,9 @@ class MempoolTransactionSQLite(db.Model):
     __tablename__ = 'mempool_transactions'
     __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)
-    sender = db.Column(db.String(20), nullable=False)
-    recipient = db.Column(db.String(20), nullable=False)
-    amount = db.Column(db.Integer, nullable=False)
+    sender = db.Column(db.String(64), nullable=False)
+    recipient = db.Column(db.String(64), nullable=False)
+    amount = db.Column(db.Double(), default=0.00000000)
     date = db.Column(db.DateTime, nullable=False)
 
 
