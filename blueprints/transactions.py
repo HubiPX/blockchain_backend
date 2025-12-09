@@ -75,9 +75,11 @@ def transfer_score():
         return jsonify({"message": "Brak danych: odbiorcy lub ilości punktów."}), 400
 
     try:
-        amount = int(amount)
+        amount = float(amount)
+        amount = round(amount, 8)
+        print(amount)
     except ValueError:
-        return jsonify({"message": "Ilość punktów musi być liczbą całkowitą."}), 400
+        return jsonify({"message": "Ilość punktów musi być liczbą."}), 400
 
     if amount <= 0:
         return jsonify({"message": "Ilość punktów musi być większa niż zero."}), 400
@@ -249,7 +251,7 @@ def generate_random_transactions():
         #  Aktualizacja score userów w DB (historyczny Users table)
         # ---------------------------
         for user in all_users:
-            user.score = user_scores[user.username]
+            user.score = round(user_scores[user.username], 8)  # <- zaokrąglenie do 8 miejsc po przecinku
         db.session.commit()
 
         mempool = MempoolTransactionMySQL.query.count()
@@ -373,6 +375,9 @@ def check_user_score():
 
     expected_score = blockchain.get_user_score(username)
     actual_score = user.score
+
+    expected_score = round(expected_score, 8)
+    actual_score = round(actual_score, 8)
 
     if expected_score == actual_score:
         return jsonify({"message": f"Score użytkownika {username} jest poprawne - {actual_score}."}), 200

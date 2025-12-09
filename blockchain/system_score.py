@@ -6,17 +6,22 @@ from database.models import TransactionsMySQL, TransactionsSQLite, TransactionsM
 from datetime import datetime
 
 
-def add_score_system(score: int, user):
+def add_score_system(score: float, user):
     if score is None:
         raise ValueError("Brak danych: ilości punktów.")
 
     try:
-        score = int(score)
+        score = float(score)
+        score = round(score, 8)
     except ValueError:
-        raise ValueError("Ilość punktów musi być liczbą całkowitą.")
+        raise ValueError("Ilość punktów musi być liczbą.")
+
+    if user.score is None:
+        user.score = 0
 
     # Dodanie punktów
     user.score += score
+    user.score = round(user.score, 8)
 
     now = datetime.now().replace(microsecond=(datetime.now().microsecond // 1000) * 1000)
 

@@ -45,13 +45,14 @@ def _set_score_(user_id):
 
     try:
         score = int(new_score)
+        score = round(score, 8)
     except ValueError:
         return jsonify({"message": "Wprowadzona wartość nie jest liczbą."}), 400
 
     if not score >= 0:
         return jsonify({"message": "Wprowadz liczbę większą od 0."}), 400
 
-    system_score = score - user.score
+    system_score = round(score - user.score, 8)
     add_score_system(system_score, user)
 
     db.session.commit()
