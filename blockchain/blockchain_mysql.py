@@ -73,9 +73,24 @@ class BlockchainMYSQL(BlockchainBase):
 
     # --- Nowe metody wymagane przez BlockchainBase ---
     def get_pending_transactions(self, limit):
-        # Pobiera limit transakcji z mempoola posortowanych według daty
-        txs = MempoolTransactionMySQL.query.order_by(MempoolTransactionMySQL.date.asc()).limit(limit).all()
-        return [{'id': tx.id, 'sender': tx.sender, 'recipient': tx.recipient, 'amount': tx.amount, 'date': tx.date} for tx in txs]
+        txs = (
+            MempoolTransactionMySQL
+            .query
+            .order_by(MempoolTransactionMySQL.id.asc())
+            .limit(limit)
+            .all()
+        )
+
+        return [
+            {
+                'id': tx.id,
+                'sender': tx.sender,
+                'recipient': tx.recipient,
+                'amount': tx.amount,
+                'date': tx.date
+            }
+            for tx in txs
+        ]
 
     def get_mempool_count(self):
         # Zwraca liczbę transakcji w mempoolu
