@@ -39,7 +39,7 @@ def generate_transactions(count, user_scores, all_users):
         if user_scores[sender_name] <= 0:
             continue
 
-        amount = random.randint(1, min(500, user_scores[sender_name]))
+        amount = random.randint(1, 1000000) / 1000000
 
         if user_scores[sender_name] - amount < 0:
             continue
