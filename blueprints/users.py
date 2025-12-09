@@ -102,8 +102,8 @@ def get_top_3():
         "username": x.username,
         "admin": x.admin,
         "score": x.score,
-        "place": top_users.index(x) + 1
-    } for x in top_users]
+        "place": i + 1
+    } for i, x in enumerate(top_users)]
 
     user_place = None
     user_id = session.get("user_id")
@@ -113,7 +113,7 @@ def get_top_3():
             # Liczymy ile użytkowników ma więcej punktów niż zalogowany
             higher_score_count = Users.query.filter(
                 (Users.score > user.score) |
-                ((Users.score == user.score) & (Users.last_login > user.last_login))
+                ((Users.score == user.score) & (func.coalesce(Users.last_login, '1970-01-01') > user.last_login))
             ).count()
             user_place = higher_score_count + 1
 
