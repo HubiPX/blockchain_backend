@@ -293,10 +293,10 @@ def validate_blockchains():
     results = {}
     all_valid = True
 
-    if blockchain_name:
+    if str(blockchain_name) in ["mysql", "mongo", "sqlite"]:
         # Sprawdzamy tylko wybrany blockchain
         blockchain = current_app.blockchains.get(blockchain_name)  # type: ignore
-        if blockchain not in ["mysql", "mongo", "sqlite"]:
+        if blockchain is None:
             return jsonify({"message": f"Blockchain '{blockchain_name}' nie istnieje."}), 404
 
         is_valid, message = blockchain.validate_chain(batch_size=batch_size)
@@ -305,7 +305,7 @@ def validate_blockchains():
             "message": blockchain_name.upper() + " " + message
         }
         all_valid = is_valid
-    else:
+    elif str(blockchain_name) == "":
         # Sprawdzamy wszystkie blockchainy (dotychczasowa logika)
         for name, blockchain in current_app.blockchains.items():  # type: ignore
             is_valid, message = blockchain.validate_chain(batch_size=batch_size)
@@ -315,7 +315,8 @@ def validate_blockchains():
             }
             if not is_valid:
                 all_valid = False
-
+    else:
+        return jsonify({"message": f"Baza danych o nazwie {blockchain_name} nie istnieje."}), 404
     if all_valid:
         return jsonify({"status": "ok", "message": results}), 200
     else:
@@ -331,7 +332,7 @@ def check_merkle_tree():
     tx_id = data.get("tx_id")
 
     if blockchain_name not in ["mysql", "mongo", "sqlite"]:
-        return jsonify({"message": f"Blockchain '{blockchain_name}' nie istnieje."}), 404
+        return jsonify({"message": f"Baza danych o nazwie {blockchain_name} nie istnieje."}), 404
     elif block_index is None or tx_id is None:
         return jsonify({"message": 'Brak danych: id bloku lub id transakcji.'}), 404
 
@@ -366,8 +367,8 @@ def check_user_score():
     username = data.get("username")
     blockchain_name = data.get("blockchain_name")
 
-    if not username or not blockchain_name:
-        return jsonify({"message": "Brak danych: username lub blockchain_name."}), 400
+    if not username or blockchain_name not in ["mysql", "mongo", "sqlite"]:
+        return jsonify({"message": "Brak danych: username lub błędna nazwa bazy danych."}), 400
 
     user = Users.query.filter_by(username=username).first()
     if not user:
