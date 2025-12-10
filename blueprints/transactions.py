@@ -490,13 +490,23 @@ def fetch_btc_transactions_background(app, count):
 @Auth.logged_admin
 def fetch_btc_transactions():
     data = request.get_json() or {}
-    count = data.get("count", 5)
+    count = data.get("count")
+    if count is None:
+        return jsonify({"message": "Parametr 'count' jest wymagany."}), 400
+    if not isinstance(count, int) or count <= 0:
+        return jsonify({"message": "Parametr 'count' musi być liczbą całkowitą większą od 0."}), 400
+
+    existing_count = PendingBtcTransactions.query.count()
+    total = existing_count + count
 
     # Przekazujemy instancję Flaska do wątku
     thread = Thread(target=fetch_btc_transactions_background, args=(current_app._get_current_object(), count))
     thread.start()
 
-    return jsonify({"message": f"Rozpoczęto generowanie {count} losowych transakcji BTC w tle."}), 200
+    return jsonify({
+        "message": f"Rozpoczęto pobieranie {count} nowych transakcji BTC w tle. "
+                   f"Po zakończeniu będzie łącznie {total} transakcji."
+    }), 200
 
 
 @transactions.route('/btc_tx', methods=['POST'])
