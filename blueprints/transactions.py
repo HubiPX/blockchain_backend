@@ -470,7 +470,6 @@ def fetch_btc_transactions_background(app, count):
                         )
                         db.session.add(new_user)
                         created_users += 1
-                        add_score_system(100, new_user)
                 try:
                     db.session.commit()
                 except SQLAlchemyError:
