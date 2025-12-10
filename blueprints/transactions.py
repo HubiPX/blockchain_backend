@@ -181,6 +181,12 @@ def generate_random_transactions():
     if len(all_users) < 2:
         return jsonify({"message": "Za mało użytkowników do wykonania transakcji."}), 400
 
+    mempool_count = MempoolTransactionMySQL.query.count()
+    if tx_limit <= mempool_count:
+        return jsonify({
+            "message": f"tx_limit musi być większy niż liczba transakcji w mempoolu ({mempool_count})."
+        }), 400
+
     user_scores = {user.username: user.score for user in all_users}
 
     transactions_data = generate_transactions(count=count, user_scores=user_scores, all_users=all_users)
@@ -524,6 +530,13 @@ def process_pending_transactions():
     if pending_count < count:
         missing = count - pending_count
         return jsonify({"message": f"Brakuje {missing} oczekujących transakcji."}), 400
+
+    mempool_count = MempoolTransactionMySQL.query.count()
+
+    if tx_limit <= mempool_count:
+        return jsonify({
+            "message": f"tx_limit musi być większy niż liczba transakcji w mempoolu ({mempool_count})."
+        }), 400
 
     # Pobranie wszystkich pending transakcji od najniższego ID
     pending_txs = PendingBtcTransactions.query.order_by(PendingBtcTransactions.id.asc()).limit(count).all()
