@@ -391,7 +391,7 @@ def check_user_score():
     actual_score = round(actual_score, 8)
 
     if expected_score == actual_score:
-        return jsonify({"message": f"Score użytkownika {username} jest poprawne - {actual_score}."}), 200
+        return jsonify({"message": f"Score użytkownika {username} jest poprawne {actual_score}."}), 200
     else:
         difference = actual_score - expected_score
 
