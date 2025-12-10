@@ -44,7 +44,7 @@ def _set_score_(user_id):
     new_score = post.get("new_score")
 
     try:
-        score = int(new_score)
+        score = float(new_score)
         score = round(score, 8)
     except ValueError:
         return jsonify({"message": "Wprowadzona wartość nie jest liczbą."}), 400
