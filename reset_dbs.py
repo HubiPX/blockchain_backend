@@ -18,6 +18,8 @@ engine = create_engine(SQLALCHEMY_DATABASE_URI)
 
 # Lista tabel do resetu
 tables = [
+    "pending_btc_transactions",
+    "users",
     "mempool_transactions",
     "blockchain_transactions",
     "blockchain_blocks",
