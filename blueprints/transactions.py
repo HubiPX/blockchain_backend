@@ -374,25 +374,39 @@ def check_user_score():
     if blockchain is None:
         return jsonify({"message": f'Nie znaleziono Blockchainu {blockchain_name}.'}), 404
 
-    expected_score = blockchain.get_user_score(username)
-    actual_score = user.score
+    # Pobranie danych z funkcji get_user_score()
+    expected_data = blockchain.get_user_score(username)
 
-    expected_score = round(expected_score, 8)
-    actual_score = round(actual_score, 8)
+    expected_score = round(expected_data["score"], 8)
+    actual_score = round(user.score, 8)
 
+    sent_count = expected_data["sent_count"]
+    received_count = expected_data["received_count"]
+
+    # -------- SCORE POPRAWNE --------
     if expected_score == actual_score:
-        return jsonify({"message": f"Score użytkownika {username} jest poprawne {actual_score}."}), 200
-    else:
-        difference = actual_score - expected_score
-
-        if difference < 0:
-            message = f"Użytkownik {username} ma o {-difference} score za mało."
-        else:
-            message = f"Użytkownik {username} ma o {difference} score za dużo."
-
         return jsonify({
-            "message": message
-        }), 400
+            "message": (
+                f"Score użytkownika {username} jest poprawne."
+                f"({actual_score} {sent_count} wysłane / {received_count} odebrane)."
+            )
+        }), 200
+
+    # -------- SCORE NIEZGODNE --------
+    difference = actual_score - expected_score
+
+    if difference < 0:
+        diff_message = f"Użytkownik {username} ma o {-difference} score za mało."
+    else:
+        diff_message = f"Użytkownik {username} ma o {difference} score za dużo."
+
+    return jsonify({
+        "message": (
+            f"{diff_message} "
+            f"(Oczekiwano: {expected_score} aktualnie: {actual_score}."
+            f"{sent_count} wysłane / {received_count} odebrane)"
+        )
+    }), 400
 
 
 def extract_addresses(tx):
