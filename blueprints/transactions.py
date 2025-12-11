@@ -121,23 +121,14 @@ def generate_transactions(count, user_scores, all_users):
     """
     transactions_data = []
     generated = 0
-    attempts = 0
-    max_attempts = count * 10
     last_time = None
 
-    while generated < count and attempts < max_attempts:
-        attempts += 1
+    while generated < count:
         sender, recipient = random.sample(all_users, 2)
         sender_name = sender.username
         recipient_name = recipient.username
 
-        if user_scores[sender_name] <= 0:
-            continue
-
         amount = random.randint(1, 1000000) / 1000000
-
-        if user_scores[sender_name] - amount < 0:
-            continue
 
         user_scores[sender_name] -= amount
         user_scores[recipient_name] += amount
