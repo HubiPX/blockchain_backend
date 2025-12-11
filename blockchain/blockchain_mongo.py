@@ -183,36 +183,62 @@ class BlockchainMongo(BlockchainBase):
         }
 
     def get_user_score(self, username: str):
-        """
-        Szybsze liczenie punktów użytkownika w MongoDB za pomocą agregacji.
-        """
-
-        # 1. Transakcje zatwierdzone
+        # ---- 1. Zatwierdzone transakcje ----
         pipeline_confirmed = [
             {"$match": {"$or": [{"sender": username}, {"recipient": username}]}},
             {"$group": {
                 "_id": None,
-                "sent": {"$sum": {"$cond": [{"$eq": ["$sender", username]}, "$amount", 0]}},
-                "received": {"$sum": {"$cond": [{"$eq": ["$recipient", username]}, "$amount", 0]}}
+                "sent_amount": {"$sum": {"$cond": [{"$eq": ["$sender", username]}, "$amount", 0]}},
+                "received_amount": {"$sum": {"$cond": [{"$eq": ["$recipient", username]}, "$amount", 0]}},
+                "sent_count": {"$sum": {"$cond": [{"$eq": ["$sender", username]}, 1, 0]}},
+                "received_count": {"$sum": {"$cond": [{"$eq": ["$recipient", username]}, 1, 0]}}
             }}
         ]
         result = list(self.mongo.db.blockchain_transactions.aggregate(pipeline_confirmed))
-        confirmed_score = 0
-        if result:
-            confirmed_score = result[0]["received"] - result[0]["sent"]
 
-        # 2. Transakcje w mempoolu
+        confirmed = {
+            "sent_amount": 0,
+            "received_amount": 0,
+            "sent_count": 0,
+            "received_count": 0
+        }
+
+        if result:
+            confirmed = result[0]
+
+        # ---- 2. Mempool ----
         pipeline_mempool = [
             {"$match": {"$or": [{"sender": username}, {"recipient": username}]}},
             {"$group": {
                 "_id": None,
-                "sent": {"$sum": {"$cond": [{"$eq": ["$sender", username]}, "$amount", 0]}},
-                "received": {"$sum": {"$cond": [{"$eq": ["$recipient", username]}, "$amount", 0]}}
+                "sent_amount": {"$sum": {"$cond": [{"$eq": ["$sender", username]}, "$amount", 0]}},
+                "received_amount": {"$sum": {"$cond": [{"$eq": ["$recipient", username]}, "$amount", 0]}},
+                "sent_count": {"$sum": {"$cond": [{"$eq": ["$sender", username]}, 1, 0]}},
+                "received_count": {"$sum": {"$cond": [{"$eq": ["$recipient", username]}, 1, 0]}}
             }}
         ]
-        result_mempool = list(self.mongo.db.mempool_transactions.aggregate(pipeline_mempool))
-        mempool_score = 0
-        if result_mempool:
-            mempool_score = result_mempool[0]["received"] - result_mempool[0]["sent"]
 
-        return confirmed_score + mempool_score
+        result_mempool = list(self.mongo.db.mempool_transactions.aggregate(pipeline_mempool))
+
+        mempool = {
+            "sent_amount": 0,
+            "received_amount": 0,
+            "sent_count": 0,
+            "received_count": 0
+        }
+
+        if result_mempool:
+            mempool = result_mempool[0]
+
+        # ---- 3. Łączna kalkulacja ----
+        total_sent_amount = confirmed["sent_amount"] + mempool["sent_amount"]
+        total_received_amount = confirmed["received_amount"] + mempool["received_amount"]
+
+        score = total_received_amount - total_sent_amount
+
+        return {
+            "score": score,
+            "sent_count": confirmed["sent_count"] + mempool["sent_count"],
+            "received_count": confirmed["received_count"] + mempool["received_count"],
+        }
+
