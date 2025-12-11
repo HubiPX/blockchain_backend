@@ -10,7 +10,6 @@ from database.models import Users, TransactionsMySQL, TransactionsSQLite, Transa
 from blueprints.auth import Auth
 from datetime import datetime, timedelta
 from threading import Thread
-from blockchain.system_score import add_score_system
 
 transactions = Blueprint('transactions', __name__)
 
