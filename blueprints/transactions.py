@@ -1,3 +1,4 @@
+import os
 import random
 import time
 from database.hash import Hash
@@ -5,7 +6,7 @@ import requests
 from flask import Blueprint, session, request, current_app, jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import scoped_session, sessionmaker
-from database.models import db, MempoolTransactionMySQL, PendingBtcTransactions
+from database.models import db, MempoolTransactionMySQL, PendingBtcTransactions, BlockchainBlockMySQL, BlockchainTransactionMySQL
 from database.models import Users, TransactionsMySQL, TransactionsSQLite, TransactionsMongo
 from blueprints.auth import Auth
 from datetime import datetime, timedelta
@@ -70,7 +71,7 @@ def transfer_score():
         db.session.add(tx_mysql)
         db.session.commit()
         # Zapis do SQLite
-        sqlite_session = scoped_session(sessionmaker(bind=db.get_engine(bind='sqlite_db')))
+        sqlite_session = scoped_session(sessionmaker(bind=db.get_engine(bind='sqlite_tx')))
         sqlite_session.add(tx_sqlite)
         sqlite_session.commit()
         sqlite_session.remove()
@@ -185,7 +186,7 @@ def generate_random_transactions():
     copy_transactions_data_mongo = [dict(tx) for tx in transactions_data]
 
     # przygotowanie sqlite session
-    sqlite_engine = db.get_engine(bind='sqlite_db')
+    sqlite_engine = db.get_engine(bind='sqlite_tx')
     sqlite_session_factory = sessionmaker(bind=sqlite_engine)
     sqlite_session = scoped_session(sqlite_session_factory)
 
@@ -559,7 +560,7 @@ def process_pending_transactions():
     copy_transactions_data_mongo = [dict(tx) for tx in transactions_data]
 
     # przygotowanie SQLite session
-    sqlite_engine = db.get_engine(bind='sqlite_db')
+    sqlite_engine = db.get_engine(bind='sqlite_tx')
     sqlite_session_factory = sessionmaker(bind=sqlite_engine)
     sqlite_session = scoped_session(sqlite_session_factory)
 

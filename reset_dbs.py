@@ -4,13 +4,21 @@ from pymongo import MongoClient
 
 
 # SQLite
-db_path = "database/database.db"
+db_path_tx = "database/transactions.db"
 
-if os.path.exists(db_path):
-    os.remove(db_path)
-    print(f"Plik {db_path} został usunięty. Baza SQLite zresetowana.")
+if os.path.exists(db_path_tx):
+    os.remove(db_path_tx)
+    print(f"Plik {db_path_tx} został usunięty. Baza SQLite zresetowana.")
 else:
-    print(f"Plik {db_path} nie istnieje. Nic do zresetowania.")
+    print(f"Plik {db_path_tx} nie istnieje. Nic do zresetowania.")
+
+db_path_bc = "database/blockchain.db"
+
+if os.path.exists(db_path_bc):
+    os.remove(db_path_bc)
+    print(f"Plik {db_path_bc} został usunięty. Baza SQLite zresetowana.")
+else:
+    print(f"Plik {db_path_bc} nie istnieje. Nic do zresetowania.")
 
 # MySQL
 SQLALCHEMY_DATABASE_URI = 'mysql://root:102309Spot@localhost/blockchain'

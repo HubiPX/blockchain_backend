@@ -67,7 +67,7 @@ class MempoolTransactionMySQL(db.Model):
 
 
 class TransactionsSQLite(db.Model):
-    __bind_key__ = 'sqlite_db'
+    __bind_key__ = 'sqlite_tx'
     __tablename__ = 'transactions'
     __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)
@@ -78,7 +78,7 @@ class TransactionsSQLite(db.Model):
 
 
 class BlockchainBlockSQLite(db.Model):
-    __bind_key__ = 'sqlite_db'
+    __bind_key__ = 'sqlite_bc'
     __tablename__ = 'blockchain_blocks'
     __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)
@@ -90,7 +90,7 @@ class BlockchainBlockSQLite(db.Model):
 
 
 class BlockchainTransactionSQLite(db.Model):
-    __bind_key__ = 'sqlite_db'
+    __bind_key__ = 'sqlite_bc'
     __tablename__ = 'blockchain_transactions'
     __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)
@@ -102,7 +102,7 @@ class BlockchainTransactionSQLite(db.Model):
 
 
 class MempoolTransactionSQLite(db.Model):
-    __bind_key__ = 'sqlite_db'
+    __bind_key__ = 'sqlite_bc'
     __tablename__ = 'mempool_transactions'
     __table_args__ = {'sqlite_autoincrement': True}
     id = db.Column(db.Integer, primary_key=True)

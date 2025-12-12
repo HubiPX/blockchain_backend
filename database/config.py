@@ -5,7 +5,8 @@ class Config:
     SECRET_KEY = "sekret"
     SQLALCHEMY_DATABASE_URI = 'mysql://root:102309Spot@localhost/blockchain'
     SQLALCHEMY_BINDS = {
-        'sqlite_db': f'sqlite:///{os.path.abspath("database/database.db")}'
+        'sqlite_bc': f'sqlite:///{os.path.abspath("database/blockchain.db")}',
+        'sqlite_tx': f'sqlite:///{os.path.abspath("database/transactions.db")}'
     }
     SQLALCHEMY_ECHO = False
     SQLALCHEMY_TRACK_MODIFICATIONS = False

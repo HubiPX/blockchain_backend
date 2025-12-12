@@ -41,11 +41,13 @@ def add_score_system(score: float, user):
         db.session.add(tx_mysql)
         db.session.commit()
 
-        # SQLite
-        sqlite_session = scoped_session(sessionmaker(bind=db.get_engine(bind='sqlite_db')))
-        sqlite_session.add(tx_sqlite)
-        sqlite_session.commit()
-        sqlite_session.remove()
+        # SQLite — TRANSAKCJE (sqlite_tx)
+        sqlite_tx_engine = db.get_engine(bind='sqlite_tx')
+        sqlite_tx_session = scoped_session(sessionmaker(bind=sqlite_tx_engine))
+
+        sqlite_tx_session.add(tx_sqlite)
+        sqlite_tx_session.commit()
+        sqlite_tx_session.remove()
 
         # MongoDB
         transactions_mongo.insert_transaction(
@@ -65,11 +67,12 @@ def add_score_system(score: float, user):
 
         mempool_size = 30
 
-        current_app.blockchains["mysql"].hm_add_transaction_to_mempool(tx, mempool_size)   # type: ignore
+        # MySQL blockchain
+        current_app.blockchains["mysql"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
         current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
-        current_app.blockchains["mongo"].hm_add_transaction_to_mempool(tx, mempool_size)   # type: ignore
+        current_app.blockchains["mongo"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
 
-        return True  # sukces
+        return True
 
     except SQLAlchemyError as e:
         db.session.rollback()
