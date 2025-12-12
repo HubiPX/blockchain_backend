@@ -679,10 +679,10 @@ def process_pending_transactions():
 
 def get_mysql_size_kb(num_rows, table_names):
     table_sizes = {
-        "transactions": 76,
-        "blockchain_blocks": 168,
-        "blockchain_transactions": 80,
-        "mempool_transactions": 80,
+        "transactions": 4 + 44 + 44 + 8 + 8,
+        "blockchain_blocks": 4 + 4 + 8 + 4 + 65 + 65,
+        "blockchain_transactions": 4 + 4 + 44 + 44 + 8 + 8,
+        "mempool_transactions": 4 + 44 + 44 + 8 + 8,
     }
 
     if isinstance(table_names, str):
@@ -690,9 +690,8 @@ def get_mysql_size_kb(num_rows, table_names):
 
     total_kb = 0.0
     for table in table_names:
-        size_per_row = table_sizes.get(table, 100)
-        total_kb += (size_per_row * num_rows) / 1024.0
-        print(total_kb)
+        size_per_row = table_sizes.get(table)
+        total_kb += (size_per_row * num_rows) / 1024.0 * 1.5
 
     return total_kb
 
