@@ -675,3 +675,99 @@ def process_pending_transactions():
 
     finally:
         sqlite_session.remove()
+
+
+def get_mysql_size_kb(num_rows, table_names):
+    table_sizes = {
+        "transactions": 76,
+        "blockchain_blocks": 168,
+        "blockchain_transactions": 80,
+        "mempool_transactions": 80,
+    }
+
+    if isinstance(table_names, str):
+        table_names = [table_names]
+
+    total_kb = 0.0
+    for table in table_names:
+        size_per_row = table_sizes.get(table, 100)
+        total_kb += (size_per_row * num_rows) / 1024.0
+        print(total_kb)
+
+    return total_kb
+
+
+@transactions.route('/database-sizes', methods=['GET'])
+@Auth.logged_rcon
+def get_database_sizes():
+    # ===========================
+    # Pomocnicze funkcje
+    # ===========================
+
+    def get_sqlite_size_kb(path):
+        return os.path.getsize(path) / 1024.0 if os.path.exists(path) else 0.0
+
+    def get_mongo_size_kb(db, collections):
+        total = 0.0
+        for coll in collections:
+            try:
+                stats = db.command("collstats", coll)
+                total += stats.get("size", 0) / 1024.0
+            except Exception:
+                pass
+        return total
+
+    # ===========================
+    # Konfiguracja nazw tabel/kolekcji
+    # ===========================
+    mysql_tx_tables = ["transactions"]
+    mysql_bc_tables = ["blockchain_blocks", "blockchain_transactions", "mempool_transactions"]
+
+    sqlite_db_tx = "database/transactions.db"
+    sqlite_db_bc = "database/blockchain.db"
+
+    mongo_tx_collections = ["transactions"]
+    mongo_bc_collections = ["blockchain_blocks", "blockchain_transactions", "mempool_transactions"]
+
+    # ===========================
+    # MySQL – policzenie rzędów
+    # ===========================
+    mysql_tx_rows = TransactionsMySQL.query.count()
+
+    mysql_bc_rows_block = get_mysql_size_kb(BlockchainBlockMySQL.query.count(), mysql_bc_tables[0])
+    mysql_bc_rows_tx = get_mysql_size_kb(BlockchainTransactionMySQL.query.count(), mysql_bc_tables[1])
+    mysql_bc_rows_mempool = get_mysql_size_kb(MempoolTransactionMySQL.query.count(), mysql_bc_tables[2])
+
+    # ===========================
+    # Pomiary MySQL
+    # ===========================
+    mysql_tx_size = get_mysql_size_kb(mysql_tx_rows, mysql_tx_tables)
+    mysql_bc_size = mysql_bc_rows_block + mysql_bc_rows_tx + mysql_bc_rows_mempool
+
+    # ===========================
+    # Pomiary SQLite
+    # ===========================
+    sqlite_tx_size = get_sqlite_size_kb(sqlite_db_tx)
+    sqlite_bc_size = get_sqlite_size_kb(sqlite_db_bc)
+
+    # ===========================
+    # Pomiary MongoDB
+    # ===========================
+    mongo_tx_size = get_mongo_size_kb(current_app.mongo.db, mongo_tx_collections)  # type: ignore
+    mongo_bc_size = get_mongo_size_kb(current_app.mongo.db, mongo_bc_collections)  # type: ignore
+
+    # ===========================
+    # Zwracanie danych
+    # ===========================
+    return jsonify({
+        "db_sizes": {
+            "MySQL": f"{mysql_tx_size:.2f} KB",
+            "SQLite": f"{sqlite_tx_size:.2f} KB",
+            "MongoDB": f"{mongo_tx_size:.2f} KB"
+        },
+        "blockchain_sizes": {
+            "MySQL": f"{mysql_bc_size:.2f} KB",
+            "SQLite": f"{sqlite_bc_size:.2f} KB",
+            "MongoDB": f"{mongo_bc_size:.2f} KB"
+        }
+    }), 200
