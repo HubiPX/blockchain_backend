@@ -759,14 +759,10 @@ def get_database_sizes():
     # Zwracanie danych
     # ===========================
     return jsonify({
-        "db_sizes": {
-            "MySQL": f"{mysql_tx_size:.2f} KB",
-            "SQLite": f"{sqlite_tx_size:.2f} KB",
-            "MongoDB": f"{mongo_tx_size:.2f} KB"
-        },
-        "blockchain_sizes": {
-            "MySQL": f"{mysql_bc_size:.2f} KB",
-            "SQLite": f"{sqlite_bc_size:.2f} KB",
-            "MongoDB": f"{mongo_bc_size:.2f} KB"
-        }
+        "message": (
+            "Rozmiary bez blockchain ---  Rozmiary blockchain\n"
+            f"MySQL: {mysql_tx_size:.2f} KB --- MySQL: {mysql_bc_size:.2f} KB\n"
+            f"SQLite: {sqlite_tx_size:.2f} KB --- SQLite: {sqlite_bc_size:.2f} KB\n"
+            f"MongoDB: {mongo_tx_size:.2f} KB --- MongoDB: {mongo_bc_size:.2f} KB\n\n"
+        )
     }), 200
