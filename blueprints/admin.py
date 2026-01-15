@@ -88,7 +88,7 @@ def _lvl_admin_(user_id):
     days = 0
 
     if not isinstance(is_admin, str):
-        return jsonify({"message": "Błędne dame wejściowe."}), 400
+        return jsonify({"message": "Błędne dane wejściowe."}), 400
 
     try:
         int(is_admin)
