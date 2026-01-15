@@ -32,6 +32,9 @@ def transactions():
     page = data.get("page", 1)
     per_page = 50
 
+    if not isinstance(page, int):
+        return jsonify({"message": "Błędne dane wejściowe."}), 400
+
     total_transactions = TransactionsMySQL.query.count()
     max_page = (total_transactions + per_page - 1) // per_page  # zaokrąglenie w górę
 
@@ -97,6 +100,9 @@ def blocks():
     data = request.get_json()
     page = data.get("page", 1)
     per_page = 50
+
+    if not isinstance(page, int):
+        return jsonify({"message": "Błędne dane wejściowe."}), 400
 
     # Liczenie wszystkich bloków w tabeli blockchain_blocks
     total_blocks = BlockchainBlockMySQL.query.count()
@@ -167,6 +173,9 @@ def mempool():
     page = data.get("page", 1)
     per_page = 50
 
+    if not isinstance(page, int):
+        return jsonify({"message": "Błędne dane wejściowe."}), 400
+
     total_txs = MempoolTransactionMySQL.query.count()
     max_page = (total_txs + per_page - 1) // per_page
 
@@ -216,6 +225,12 @@ def blocks_transactions():
 
     if not block_id:
         return jsonify({"message": "Nie podano ID bloku."}), 400
+
+    block = BlockchainBlockMySQL.query.filter_by(id=block_id).first()
+    if not block:
+        return jsonify({"message": f"Blok o ID {block_id} nie istnieje."}), 404
+    elif block.id == 1:
+        return jsonify({"message": f"Blok generic (ID = 1) nie zawiera transakcji."}), 404
 
     # Liczenie wszystkich transakcji w danym bloku
     total_txs = BlockchainTransactionMySQL.query.filter_by(block_id=block_id).count()
