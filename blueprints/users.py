@@ -18,6 +18,9 @@ def _create_():
     password = post.get("password")
     username = post.get("username")
 
+    if not password or not repassword or not username:
+        return jsonify({"message": "Wypełnij wszystkie pola."}), 400
+
     if password != repassword:
         return jsonify({"message": "Podane hasła są różne!"}), 406
 
@@ -132,12 +135,13 @@ def _change_password_():
     new_pwd = post.get("new_password")
     new_pwd2 = post.get("new_password2")
 
+    if not current_pwd or not new_pwd or not new_pwd2:
+        return jsonify({"message": "Wypełnij wszystkie pola."}), 400
+
     if new_pwd != new_pwd2:
         return jsonify({"message": "Nowe hasła są różne."}), 406
 
-    if not current_pwd or not new_pwd or not new_pwd2:
-        return jsonify({"message": "Wypełnij wszystkie pola."}), 400
-    elif len(new_pwd) < 3:
+    if len(new_pwd) < 3:
         return jsonify({"message": "Nowe hasło jest za krótkie."}), 400
     elif len(new_pwd) > 20:
         return jsonify({"message": "Nowe hasło jest za długie."}), 400
@@ -152,4 +156,4 @@ def _change_password_():
     pwd_hash = Hash.hash_password(new_pwd)
     user.password = pwd_hash
     db.session.commit()
-    return jsonify({"message": ""}), 200
+    return jsonify({"message": "Hasło zostało zmienione!"}), 200
