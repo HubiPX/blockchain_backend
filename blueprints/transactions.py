@@ -763,6 +763,6 @@ def get_database_sizes():
             "Rozmiary bez blockchain ---  Rozmiary blockchain\n"
             f"MySQL: {mysql_tx_size:.2f} KB --- MySQL: {mysql_bc_size:.2f} KB\n"
             f"SQLite: {sqlite_tx_size:.2f} KB --- SQLite: {sqlite_bc_size:.2f} KB\n"
-            f"MongoDB: {mongo_tx_size:.2f} KB --- MongoDB: {mongo_bc_size:.2f} KB\n\n"
+            f"MongoDB: {mongo_tx_size:.2f} KB --- MongoDB: {mongo_bc_size:.2f} KB\n"
         )
     }), 200
