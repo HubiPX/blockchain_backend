@@ -87,6 +87,9 @@ def _lvl_admin_(user_id):
     is_admin = post.get("admin")
     days = 0
 
+    if not isinstance(is_admin, str):
+        return jsonify({"message": "Błędne dame wejściowe."}), 400
+
     try:
         int(is_admin)
     except ValueError:
