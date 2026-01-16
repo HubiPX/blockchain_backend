@@ -7,7 +7,7 @@ import time
 
 class BlockchainBase(ABC):
     def __init__(self):
-        self.hm_current_transactions = []
+        self.current_transactions = []
         self.last_block = self.get_last_block_from_db()
         if not self.last_block:
             self.last_block = self._create_genesis_block()
@@ -56,23 +56,23 @@ class BlockchainBase(ABC):
         hm_guess_hash = hashlib.sha256(hm_guess).hexdigest()
         return hm_guess_hash[-3:] == "239"
 
-    def _create_block(self, hm_proof, hm_previous_hash):
+    def _create_block(self, proof, previous_hash):
         block_index = self.last_block['index'] + 1 if self.last_block else 1
 
         block_data = {
             'index': block_index,
             'timestamp': datetime.now().replace(microsecond=(datetime.now().microsecond // 1000) * 1000),
-            'transactions': self.hm_current_transactions,
-            'proof': hm_proof,
-            'previous_hash': hm_previous_hash,
-            'merkle_root': self.create_merkle_root(self.hm_current_transactions)
+            'transactions': self.current_transactions,
+            'proof': proof,
+            'previous_hash': previous_hash,
+            'merkle_root': self.create_merkle_root(self.current_transactions)
         }
-        self.hm_current_transactions = []
+        self.current_transactions = []
 
         return block_data
 
     def _create_genesis_block(self):
-        block = self._create_block(hm_proof=100, hm_previous_hash='mentel')
+        block = self._create_block(proof=100, previous_hash='mentel')
         self.save_block_to_db(block, [])
         return block
 
@@ -85,7 +85,7 @@ class BlockchainBase(ABC):
         else:
             pending_txs.sort(key=lambda tx: tx['id'])
 
-        self.hm_current_transactions = pending_txs
+        self.current_transactions = pending_txs
 
         proof = self.hm_proof_of_work(self.last_block['proof'], self.hm_hash(self.last_block))
         block = self._create_block(proof, self.hm_hash(self.last_block))
@@ -149,7 +149,7 @@ class BlockchainBase(ABC):
 
                 if previous_block:
                     # sprawdź hash poprzedniego bloku
-                    previous_hash = self.hm_hash(previous_block)
+                    previous_hash = self.hash(previous_block)
                     if current_block['previous_hash'] != previous_hash:
                         return False, f"Nieprawidłowy poprzedni hash w bloku {current_block['index']}."
 
@@ -167,13 +167,13 @@ class BlockchainBase(ABC):
         return True, f"Blockchain jest poprawny. {highest_index} bloków. {round(end_time, 3)}s"
 
     @staticmethod
-    def hm_hash(data):
+    def hash(data):
         return hashlib.sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
 
     def create_merkle_root(self, transactions):
         if not transactions:
             return None
-        hashes = [self.hm_hash(tx) for tx in transactions]
+        hashes = [self.hash(tx) for tx in transactions]
         while len(hashes) > 1:
             if len(hashes) % 2 != 0:
                 hashes.append(hashes[-1])
@@ -190,7 +190,7 @@ class BlockchainBase(ABC):
             return []
 
         # Oblicz hash każdej transakcji
-        hashes = [self.hm_hash(tx) for tx in transactions]
+        hashes = [self.hash(tx) for tx in transactions]
         index = tx_index
         proof = []
 
@@ -220,7 +220,7 @@ class BlockchainBase(ABC):
         """
         Weryfikuje dowód Merkle Proof dla podanej transakcji.
         """
-        current_hash = self.hm_hash(transaction)
+        current_hash = self.hash(transaction)
 
         for step in proof:
             if step["position"] == "left":
