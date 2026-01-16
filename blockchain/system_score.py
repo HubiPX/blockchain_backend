@@ -68,9 +68,9 @@ def add_score_system(score: float, user):
         mempool_size = 30
 
         # MySQL blockchain
-        current_app.blockchains["mysql"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
-        current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
-        current_app.blockchains["mongo"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
+        current_app.blockchains["mysql"].add_transaction_to_mempool(tx, mempool_size)  # type: ignore
+        current_app.blockchains["sqlite"].add_transaction_to_mempool(tx, mempool_size)  # type: ignore
+        current_app.blockchains["mongo"].add_transaction_to_mempool(tx, mempool_size)  # type: ignore
 
         return True
 
