@@ -94,13 +94,13 @@ def transfer_score():
         mempool_size = 30
 
         # Zapis do MySQL
-        current_app.blockchains["mysql"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
+        current_app.blockchains["mysql"].add_transaction_to_mempool(tx, mempool_size)  # type: ignore
 
         # Zapis do SQLite
-        current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
+        current_app.blockchains["sqlite"].add_transaction_to_mempool(tx, mempool_size)  # type: ignore
 
         # Zapis do Mongo
-        current_app.blockchains["mongo"].hm_add_transaction_to_mempool(tx, mempool_size)  # type: ignore
+        current_app.blockchains["mongo"].add_transaction_to_mempool(tx, mempool_size)  # type: ignore
 
         return jsonify({"message": f"Pomyślnie przesłano {amount} punktów do {recipient_username}."}), 200
 
@@ -228,7 +228,7 @@ def generate_random_transactions():
         start_mysql_blockchain = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = transactions_data[i:i + batch_size]
-            current_app.blockchains["mysql"].hm_add_transaction_to_mempool(batch, tx_limit)  # type: ignore
+            current_app.blockchains["mysql"].add_transaction_to_mempool(batch, tx_limit)  # type: ignore
         end_mysql_blockchain = time.perf_counter()
         mysql_blockchain_time = end_mysql_blockchain - start_mysql_blockchain
 
@@ -236,7 +236,7 @@ def generate_random_transactions():
         start_sqlite_blockchain = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = copy_transactions_data_sqlite[i:i + batch_size]
-            current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(batch, tx_limit)  # type: ignore
+            current_app.blockchains["sqlite"].add_transaction_to_mempool(batch, tx_limit)  # type: ignore
         end_sqlite_blockchain = time.perf_counter()
         sqlite_blockchain_time = end_sqlite_blockchain - start_sqlite_blockchain
 
@@ -244,7 +244,7 @@ def generate_random_transactions():
         start_mongo_blockchain = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = copy_transactions_data_mongo[i:i + batch_size]
-            current_app.blockchains["mongo"].hm_add_transaction_to_mempool(batch, tx_limit)  # type: ignore
+            current_app.blockchains["mongo"].add_transaction_to_mempool(batch, tx_limit)  # type: ignore
         end_mongo_blockchain = time.perf_counter()
         mongo_blockchain_time = end_mongo_blockchain - start_mongo_blockchain
 
@@ -603,7 +603,7 @@ def process_pending_transactions():
         start_mysql_blockchain = time.perf_counter()
         for i in range(0, len(transactions_data), batch_size):
             batch = transactions_data[i:i + batch_size]
-            current_app.blockchains["mysql"].hm_add_transaction_to_mempool(batch, tx_limit)  # type: ignore
+            current_app.blockchains["mysql"].add_transaction_to_mempool(batch, tx_limit)  # type: ignore
         end_mysql_blockchain = time.perf_counter()
         mysql_blockchain_time = end_mysql_blockchain - start_mysql_blockchain
 
@@ -611,7 +611,7 @@ def process_pending_transactions():
         start_sqlite_blockchain = time.perf_counter()
         for i in range(0, len(copy_transactions_data_sqlite), batch_size):
             batch = copy_transactions_data_sqlite[i:i + batch_size]
-            current_app.blockchains["sqlite"].hm_add_transaction_to_mempool(batch, tx_limit)  # type: ignore
+            current_app.blockchains["sqlite"].add_transaction_to_mempool(batch, tx_limit)  # type: ignore
         end_sqlite_blockchain = time.perf_counter()
         sqlite_blockchain_time = end_sqlite_blockchain - start_sqlite_blockchain
 
@@ -619,7 +619,7 @@ def process_pending_transactions():
         start_mongo_blockchain = time.perf_counter()
         for i in range(0, count, batch_size):
             batch = copy_transactions_data_mongo[i:i + batch_size]
-            current_app.blockchains["mongo"].hm_add_transaction_to_mempool(batch, tx_limit)  # type: ignore
+            current_app.blockchains["mongo"].add_transaction_to_mempool(batch, tx_limit)  # type: ignore
         end_mongo_blockchain = time.perf_counter()
         mongo_blockchain_time = end_mongo_blockchain - start_mongo_blockchain
         # ---------------------------
