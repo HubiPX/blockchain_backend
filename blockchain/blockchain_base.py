@@ -6,6 +6,8 @@ import time
 
 
 class BlockchainBase(ABC):
+    TARGET = 2 ** 500
+
     def __init__(self):
         self.current_transactions = []
         self.last_block = self.get_last_block_from_db()
@@ -44,17 +46,23 @@ class BlockchainBase(ABC):
         """Zwraca ustaloną ilość bloków z bazy sortując po index"""
         pass
 
-    def hm_proof_of_work(self, hm_last_proof, block_hash):
-        hm_proof = 0
-        while not self.hm_valid_proof(hm_last_proof, hm_proof, block_hash):
-            hm_proof += 1
-        return hm_proof
+    def proof_of_work(self, last_proof, block_hash):
+        proof = 0
+        while not self.valid_proof(
+            last_proof,
+            proof,
+            block_hash,
+            self.TARGET
+        ):
+            proof += 1
+        return proof
 
     @staticmethod
-    def hm_valid_proof(hm_last_proof, hm_proof, block_hash):
-        hm_guess = f'{hm_last_proof}{hm_proof}{block_hash}'.encode()
-        hm_guess_hash = hashlib.sha256(hm_guess).hexdigest()
-        return hm_guess_hash[-3:] == "239"
+    def valid_proof(last_proof, proof, block_hash, target):
+        guess = f'{last_proof}{proof}{block_hash}'.encode()
+        guess_hash = hashlib.sha256(guess).hexdigest()
+        guess_int = int(guess_hash, 16)
+        return guess_int < target
 
     def _create_block(self, proof, previous_hash):
         block_index = self.last_block['index'] + 1 if self.last_block else 1
@@ -87,8 +95,8 @@ class BlockchainBase(ABC):
 
         self.current_transactions = pending_txs
 
-        proof = self.hm_proof_of_work(self.last_block['proof'], self.hm_hash(self.last_block))
-        block = self._create_block(proof, self.hm_hash(self.last_block))
+        proof = self.proof_of_work(self.last_block['proof'], self.hash(self.last_block))
+        block = self._create_block(proof, self.hash(self.last_block))
 
         self.save_block_to_db(block, pending_txs)
         self.last_block = block
@@ -154,7 +162,7 @@ class BlockchainBase(ABC):
                         return False, f"Nieprawidłowy poprzedni hash w bloku {current_block['index']}."
 
                     # sprawdź proof-of-work
-                    if not self.hm_valid_proof(previous_block['proof'], current_block['proof'], previous_hash):
+                    if not self.valid_proof(previous_block['proof'], current_block['proof'], previous_hash, self.TARGET):
                         return False, f"Nieprawidłowy dowód w bloku {current_block['index']}."
 
                 last_block = current_block
