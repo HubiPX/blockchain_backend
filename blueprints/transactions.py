@@ -154,7 +154,7 @@ def generate_transactions(count, user_scores, all_users):
 
 
 @transactions.route('/generate-random-transactions', methods=['POST'])
-@Auth.logged_rcon
+@Auth.logged_admin
 def generate_random_transactions():
     data = request.get_json()
     count = data.get("count")
@@ -281,7 +281,7 @@ def generate_random_transactions():
 
 
 @transactions.route('/validate', methods=["POST"])
-@Auth.logged_admin
+@Auth.logged_mod
 def validate_blockchains():
     data = request.get_json()
     blockchain_name = data.get("blockchain_name")
@@ -358,7 +358,7 @@ def check_merkle_tree():
 
 
 @transactions.route('/check_user_score', methods=["POST"])
-@Auth.logged_admin
+@Auth.logged_mod
 def check_user_score():
     data = request.get_json()
     username = data.get("username")
@@ -503,8 +503,8 @@ def fetch_btc_transactions():
     count = data.get("count")
     if count is None:
         return jsonify({"message": "Parametr 'count' jest wymagany."}), 400
-    if not isinstance(count, int) or count <= 0:
-        return jsonify({"message": "Parametr 'count' musi być liczbą całkowitą większą od 0."}), 400
+    if not isinstance(count, int) or count <= 0 or count > 10000:
+        return jsonify({"message": "Ilość transakcji musi być liczbą z zakresu 1-10000."}), 400
 
     existing_count = PendingBtcTransactions.query.count()
     total = existing_count + count
@@ -520,15 +520,15 @@ def fetch_btc_transactions():
 
 
 @transactions.route('/btc_tx', methods=['POST'])
-@Auth.logged_rcon
+@Auth.logged_admin
 def process_pending_transactions():
     data = request.get_json()
     count = data.get("count")
     tx_limit = data.get("tx_limit", 30)
     batch_size = data.get("batch_size", 1000)
 
-    if not isinstance(count, int) or count <= 0:
-        return jsonify({"message": "Nieprawidłowa liczba transakcji."}), 400
+    if not isinstance(count, int) or count <= 0 or count > 10000:
+        return jsonify({"message": "Ilość transakcji musi być liczbą z zakresu 1-10000."}), 400
 
     pending_count = PendingBtcTransactions.query.count()
     if pending_count < count:
@@ -697,7 +697,7 @@ def get_mysql_size_kb(num_rows, table_names):
 
 
 @transactions.route('/database-sizes', methods=['GET'])
-@Auth.logged_rcon
+@Auth.logged_admin
 def get_database_sizes():
     # ===========================
     # Pomocnicze funkcje
