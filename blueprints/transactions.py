@@ -389,7 +389,7 @@ def check_user_score():
         return jsonify({
             "message": (
                 f"Score użytkownika {username} jest poprawne."
-                f"({actual_score} {sent_count} wysłane / {received_count} odebrane)."
+                f"({actual_score} --- {sent_count} wysłane / {received_count} odebrane)."
             )
         }), 200
 
