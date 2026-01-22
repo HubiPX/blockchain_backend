@@ -6,7 +6,7 @@ import time
 
 
 class BlockchainBase(ABC):
-    TARGET = 2 ** 500
+    TARGET = 2 ** 242
 
     def __init__(self):
         self.current_transactions = []
