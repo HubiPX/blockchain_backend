@@ -441,7 +441,7 @@ def fetch_btc_transactions_background(app, count):
             latest = int(requests.get("https://blockstream.info/api/blocks/tip/height").text)
         except:
             return
-        ZAKRES_BLOKOW = 50
+        ZAKRES_BLOKOW = 1000
 
         while saved < count:
             height = latest - random.randint(1, ZAKRES_BLOKOW)
